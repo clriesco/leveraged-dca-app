@@ -7,6 +7,7 @@ import { PrismaService } from "../prisma/prisma.service";
  * Metaparameters for rebalancing algorithm
  * Based on BacktestHistorical.ipynb METAPARAMETERS
  */
+// eslint-disable-next-line @typescript-eslint/no-unused-vars
 interface RebalanceMetaparameters {
   leverage: number;
   minLeverage: number;
@@ -27,33 +28,35 @@ interface RebalanceMetaparameters {
 /**
  * Default metaparameters from notebook
  * Matches METAPARAMETERS in BacktestHistorical.ipynb
+ * @deprecated Not currently used, kept for reference
  */
-const DEFAULT_METAPARAMETERS: RebalanceMetaparameters = {
-  leverage: 2.5,
-  minLeverage: 2.5,
-  maxLeverage: 3.0,
-  maxWeight: 0.4, // 40% max per asset for more flexibility
-  minWeight: 0.05, // 5% min per asset for more flexibility
-  drawdownRedeployThreshold: 0.12, // 12% drawdown triggers full deploy
-  weightDeviationThreshold: 0.05, // 5% weight deviation triggers rebalance
-  volatilityLookbackDays: 63,
-  volatilityRedeployThreshold: 0.18, // 18% annualized volatility
-  gradualDeployFactor: 0.5,
-  meanReturnShrinkage: 0.6, // Shrinkage applied to historical mean returns for realism
-  riskFreeRate: 0.02, // 2% risk-free rate
-  useDynamicSharpeRebalance: true, // Dynamic Sharpe optimization enabled
-  yearlyTradingDays: 252,
-};
+// const DEFAULT_METAPARAMETERS: RebalanceMetaparameters = {
+//   leverage: 2.5,
+//   minLeverage: 2.5,
+//   maxLeverage: 3.0,
+//   maxWeight: 0.4, // 40% max per asset for more flexibility
+//   minWeight: 0.05, // 5% min per asset for more flexibility
+//   drawdownRedeployThreshold: 0.12, // 12% drawdown triggers full deploy
+//   weightDeviationThreshold: 0.05, // 5% weight deviation triggers rebalance
+//   volatilityLookbackDays: 63,
+//   volatilityRedeployThreshold: 0.18, // 18% annualized volatility
+//   gradualDeployFactor: 0.5,
+//   meanReturnShrinkage: 0.6, // Shrinkage applied to historical mean returns for realism
+//   riskFreeRate: 0.02, // 2% risk-free rate
+//   useDynamicSharpeRebalance: true, // Dynamic Sharpe optimization enabled
+//   yearlyTradingDays: 252,
+// };
 
 /**
  * Initial portfolio weights from notebook (PORTFOLIO_INITIAL)
+ * @deprecated Not currently used, kept for reference
  */
-const PORTFOLIO_INITIAL: Record<string, number> = {
-  SPY: 0.6,
-  TLT: 0.15,
-  VT: 0.2,
-  "BTC-USD": 0.05,
-};
+// const PORTFOLIO_INITIAL: Record<string, number> = {
+//   SPY: 0.6,
+//   TLT: 0.15,
+//   VT: 0.2,
+//   "BTC-USD": 0.05,
+// };
 
 /**
  * Position in the proposal
@@ -283,7 +286,7 @@ export class RebalanceService {
   private calculateCurrentState(
     portfolio: any,
     latestPrices: Record<string, number>,
-    assets: any[]
+    _assets: any[]
   ): {
     equity: number;
     exposure: number;
@@ -315,9 +318,9 @@ export class RebalanceService {
     // Calculate pending contributions (not deployed) - for display only
     // NOTE: Contributions are now marked as deployed immediately when registered,
     // so pending contributions should be 0 in normal operation
-    const pendingContributions = portfolio.contributions
-      .filter((c: any) => !c.deployed)
-      .reduce((sum: number, c: any) => sum + c.amount, 0);
+    // const pendingContributions = portfolio.contributions
+    //   .filter((c: any) => !c.deployed)
+    //   .reduce((sum: number, c: any) => sum + c.amount, 0);
 
     // Equity should already include all contributions (they're marked as deployed immediately)
     // We do NOT add pendingContributions here to avoid double-counting
@@ -788,7 +791,7 @@ export class RebalanceService {
     while (needsAdjustment && iterations < 10) {
       needsAdjustment = false;
       let excess = 0;
-      let deficitCount = 0;
+      // let deficitCount = 0; // Not currently used
 
       for (let i = 0; i < n; i++) {
         if (bestWeights[i] > maxWeight) {
@@ -799,7 +802,7 @@ export class RebalanceService {
           excess -= minWeight - bestWeights[i];
           bestWeights[i] = minWeight;
           needsAdjustment = true;
-          deficitCount++;
+          // deficitCount++; // Not currently used
         }
       }
 
@@ -988,8 +991,8 @@ export class RebalanceService {
   private calculateEquityBorrowBreakdown(
     currentExposure: number,
     targetExposure: number,
-    currentEquity: number,
-    config: any
+    _currentEquity: number,
+    _config: any
   ): { equityUsed: number; borrowIncrease: number } {
     const netExposureChange = targetExposure - currentExposure;
 

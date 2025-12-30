@@ -57,7 +57,7 @@ export default function Contribution() {
           } else {
             setError("No portfolio found");
           }
-        } catch (err) {
+        } catch {
           setError("Failed to load portfolio");
         }
       }

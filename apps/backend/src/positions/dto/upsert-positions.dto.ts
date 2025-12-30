@@ -1,16 +1,16 @@
 import { Type } from 'class-transformer';
-import { IsArray, IsNotEmpty, IsString, IsUUID, ValidateNested, IsNumber, IsOptional, Min } from 'class-validator';
+import { IsArray, IsUUID, ValidateNested, IsNumber, IsOptional, Min } from 'class-validator';
 
 import { PositionItemDto } from './position-item.dto';
 
 export class UpsertPositionsDto {
   @IsUUID()
-  portfolioId: string;
+  portfolioId!: string;
 
   @IsArray()
   @ValidateNested({ each: true })
   @Type(() => PositionItemDto)
-  positions: PositionItemDto[];
+  positions!: PositionItemDto[];
 
   @IsOptional()
   @IsNumber()

@@ -104,7 +104,7 @@ export class PortfoliosService {
       if (metric.metadataJson) {
         try {
           metadata = JSON.parse(metric.metadataJson);
-        } catch (error) {
+        } catch {
           metadata = null;
         }
       }

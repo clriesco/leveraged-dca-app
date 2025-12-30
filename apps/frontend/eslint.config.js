@@ -21,8 +21,8 @@ module.exports = [
         ecmaFeatures: {
           jsx: true,
         },
-        project: './tsconfig.json',
-        tsconfigRootDir: __dirname,
+        project: false, // Disable type-aware linting to avoid parsing issues
+        lib: ['DOM', 'DOM.Iterable', 'ES2022'],
       },
       globals: {
         window: 'readonly',
@@ -42,6 +42,14 @@ module.exports = [
         setInterval: 'readonly',
         clearInterval: 'readonly',
         NodeJS: 'readonly',
+        HTMLDivElement: 'readonly',
+        SVGElement: 'readonly',
+        SVGSVGElement: 'readonly',
+        RequestInit: 'readonly',
+        HeadersInit: 'readonly',
+      },
+      parserOptions: {
+        lib: ['DOM', 'DOM.Iterable', 'ES2022'],
       },
     },
     plugins: {

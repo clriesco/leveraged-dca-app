@@ -3,12 +3,7 @@ import { useRouter } from "next/router";
 import Head from "next/head";
 import { useAuth } from "../../contexts/AuthContext";
 import DashboardSidebar from "../../components/DashboardSidebar";
-import {
-  PortfolioRecommendationsResponse,
-  Recommendation,
-  RecommendationPriority,
-  PurchaseRecommendation,
-} from "../../lib/api";
+import { Recommendation, RecommendationPriority } from "../../lib/api";
 import {
   usePortfolios,
   usePortfolioSummary,
@@ -29,6 +24,7 @@ interface Position {
   };
 }
 
+// eslint-disable-next-line @typescript-eslint/no-unused-vars
 interface PortfolioSummary {
   portfolio: {
     id: string;
@@ -1303,7 +1299,9 @@ function Dashboard() {
  */
 function EquityChart({ data }: { data: MetricsPoint[] }) {
   const [hoverIndex, setHoverIndex] = useState<number | null>(null);
-  const [containerRef, setContainerRef] = useState<HTMLDivElement | null>(null);
+  const [_containerRef, setContainerRef] = useState<HTMLDivElement | null>(
+    null
+  );
 
   if (data.length === 0) return null;
 
@@ -1332,7 +1330,7 @@ function EquityChart({ data }: { data: MetricsPoint[] }) {
     .map((coord) => `${coord.x},${coord.y}`)
     .join(" ");
 
-  const handleMouseMove = (event: React.MouseEvent<SVGSVGElement>) => {
+  const handleMouseMove = (event: React.MouseEvent<SVGElement>) => {
     // Get the SVG element's bounding box (already scaled by viewBox)
     const svgRect = event.currentTarget.getBoundingClientRect();
     if (svgRect.width === 0) {

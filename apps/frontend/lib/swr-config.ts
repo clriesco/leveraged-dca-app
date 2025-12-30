@@ -21,7 +21,7 @@ export const swrConfig: SWRConfiguration = {
  */
 export function useSWRWithConfig<T>(
   key: string | null,
-  fetcher: () => Promise<T> | null,
+  fetcher: (() => Promise<T>) | null,
   config?: SWRConfiguration
 ) {
   return useSWR<T>(key, fetcher, { ...swrConfig, ...config });

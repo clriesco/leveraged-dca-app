@@ -1,4 +1,4 @@
-import React, { useState, useEffect, FormEvent, useRef } from "react";
+import React, { useState, useEffect, FormEvent, useRef, useCallback } from "react";
 import { useRouter } from "next/router";
 import Head from "next/head";
 import { useAuth } from "../../contexts/AuthContext";
@@ -24,6 +24,7 @@ interface PositionInput {
   assetName: string;
   quantity: string;
   currentQuantity: number;
+  tempId?: string; // Temporary ID for new positions
 }
 
 /**
@@ -67,12 +68,12 @@ export default function ManualUpdate() {
   /**
    * Format quantity to appropriate precision
    */
-  const formatQuantity = (quantity: number, symbol: string): string => {
+  const formatQuantity = useCallback((quantity: number, symbol: string): string => {
     const { decimals } = getAssetPrecision(symbol);
     // Round to appropriate decimals and remove trailing zeros
     const rounded = Number(quantity.toFixed(decimals));
     return rounded.toString();
-  };
+  }, []);
 
   // Load portfolio and current positions
   useEffect(() => {
@@ -108,7 +109,6 @@ export default function ManualUpdate() {
         // Set positions from current holdings
         // Format quantities to appropriate precision to avoid too many decimals
         const positionInputs: PositionInput[] = summary.positions.map((pos: { asset: Asset; quantity: number }) => {
-          const { decimals } = getAssetPrecision(pos.asset.symbol);
           const formattedQuantity = formatQuantity(pos.quantity, pos.asset.symbol);
           
           return {
@@ -134,7 +134,7 @@ export default function ManualUpdate() {
     } else if (user) {
       loadPortfolio();
     }
-  }, [user, loading, router, router.query.portfolioId]);
+  }, [user, loading, router, router.query.portfolioId, formatQuantity]);
 
   const handlePositionChange = (index: number, value: string) => {
     const updated = [...positions];
@@ -522,7 +522,9 @@ export default function ManualUpdate() {
                             />
                             {showDropdown[originalIdx] && searchResults[originalIdx] && searchResults[originalIdx].length > 0 && (
                               <div
-                                ref={(el) => (dropdownRefs.current[originalIdx] = el)}
+                                ref={(el) => {
+                                  dropdownRefs.current[originalIdx] = el;
+                                }}
                                 style={{
                                   position: "absolute",
                                   top: "100%",
@@ -624,7 +626,7 @@ export default function ManualUpdate() {
                           value={pos.quantity}
                           onChange={(e) => handlePositionChange(originalIdx, e.target.value)}
                       placeholder="Cantidad"
-                      disabled={isSubmitting || (pos.assetId && parseFloat(pos.quantity) === 0)}
+                      disabled={isSubmitting || !!(pos.assetId && parseFloat(pos.quantity) === 0)}
                       style={{
                         width: "100%",
                         padding: "0.75rem 1rem",

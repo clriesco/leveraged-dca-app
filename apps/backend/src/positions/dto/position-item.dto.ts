@@ -4,21 +4,21 @@ import { IsNotEmpty, IsNumber, IsOptional, IsString, Min, Max } from 'class-vali
 export class PositionItemDto {
   @IsString()
   @IsNotEmpty()
-  symbol: string;
+  symbol!: string;
 
   @IsNumber()
   @Min(0)
   @Type(() => Number)
-  quantity: number;
+  quantity!: number;
 
   @IsNumber()
   @Min(0)
   @Type(() => Number)
-  avgPrice: number;
+  avgPrice!: number;
 
   @IsString()
   @IsNotEmpty()
-  source: string;
+  source!: string;
 
   @IsOptional()
   @IsNumber()

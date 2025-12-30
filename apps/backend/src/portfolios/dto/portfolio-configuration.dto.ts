@@ -1,4 +1,3 @@
-import { Type } from "class-transformer";
 import {
   IsBoolean,
   IsIn,
@@ -8,7 +7,6 @@ import {
   IsString,
   Max,
   Min,
-  ValidateNested,
 } from "class-validator";
 
 /**
@@ -18,7 +16,7 @@ export class TargetWeightDto {
   @IsNumber()
   @Min(0)
   @Max(1)
-  weight: number;
+  weight!: number;
 }
 
 /**

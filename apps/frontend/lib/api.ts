@@ -6,14 +6,66 @@ const API_BASE_URL =
   process.env.NEXT_PUBLIC_API_URL || "http://localhost:3003/api";
 
 /**
+ * Type definitions
+ */
+export interface Position {
+  id: string;
+  quantity: number;
+  avgPrice: number;
+  exposureUsd: number;
+  weight: number;
+  asset: {
+    id: string;
+    symbol: string;
+    name: string;
+  };
+}
+
+export interface AnalyticsStats {
+  capitalFinal: number;
+  totalInvested: number;
+  absoluteReturn: number;
+  totalReturnPercent: number;
+  cagr: number;
+  volatility: number;
+  sharpe: number;
+  maxDrawdownEquity: number;
+  maxDrawdownExposure: number;
+  underwaterDays: number;
+  bestDay: { date: string; return: number } | null;
+  worstDay: { date: string; return: number } | null;
+}
+
+export interface PortfolioSummary {
+  portfolio: {
+    id: string;
+    name: string;
+    leverageMin: number;
+    leverageMax: number;
+  };
+  metrics: {
+    equity: number;
+    exposure: number;
+    leverage: number;
+    totalContributions: number;
+    absoluteReturn: number;
+    percentReturn: number;
+    startDate: string;
+    lastUpdate: string;
+  };
+  positions: Position[];
+  analytics: AnalyticsStats;
+}
+
+/**
  * Fetch wrapper with auth headers
  */
 export async function fetchAPI(endpoint: string, options: RequestInit = {}) {
   const token = localStorage.getItem("supabase_token");
 
-  const headers: HeadersInit = {
+  const headers: Record<string, string> = {
     "Content-Type": "application/json",
-    ...options.headers,
+    ...(options.headers as Record<string, string>),
   };
 
   if (token) {

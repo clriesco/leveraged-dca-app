@@ -36,7 +36,7 @@ export function usePortfolios() {
   const { user } = useAuth();
   const { data, error, isLoading, mutate } = useSWR(
     user?.email ? `portfolios-${user.email}` : null,
-    () => getPortfoliosByEmail(user!.email),
+    () => getPortfoliosByEmail(user!.email!),
     {
       ...swrConfig,
       // Portfolios don't change often, cache for 10 minutes

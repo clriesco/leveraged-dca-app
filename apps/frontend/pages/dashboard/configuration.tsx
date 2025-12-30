@@ -21,7 +21,7 @@ export default function Configuration() {
   const { user, loading } = useAuth();
 
   const [portfolioId, setPortfolioId] = useState<string | null>(null);
-  const [config, setConfig] = useState<PortfolioConfiguration | null>(null);
+  const [_config, setConfig] = useState<PortfolioConfiguration | null>(null);
   const [isLoading, setIsLoading] = useState(true);
   const [isSaving, setIsSaving] = useState(false);
   const [message, setMessage] = useState("");
@@ -106,7 +106,7 @@ export default function Configuration() {
     }
   }, [user, loading, router, router.query.portfolioId]);
 
-  const handleInputChange = (field: string, value: number | boolean) => {
+  const handleInputChange = (field: string, value: number | boolean | string) => {
     setFormData((prev) => ({ ...prev, [field]: value }));
   };
 

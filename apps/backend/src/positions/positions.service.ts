@@ -666,12 +666,6 @@ export class PositionsService {
       const allSymbols = portfolio.positions.map(
         (p: any) => p.asset.symbol
       );
-      const totalAssets = allSymbols.length;
-
-      // Create map of provided weights
-      const providedWeightsMap = new Map(
-        providedWeights.map((w) => [w.symbol, w.weight])
-      );
 
       // Update weights
       const updatedWeights: Record<string, number> = { ...currentWeights };
@@ -838,7 +832,7 @@ export class PositionsService {
               price =
                 priceData.chart?.result?.[0]?.meta?.regularMarketPrice || null;
             }
-          } catch (error) {
+          } catch {
             // Ignore price fetch errors
           }
 
