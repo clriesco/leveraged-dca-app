@@ -10,6 +10,7 @@ import {
   TargetWeight,
 } from "../../lib/api";
 import DashboardSidebar from "../../components/DashboardSidebar";
+import { invalidatePortfolioCache } from "../../lib/hooks/use-portfolio-data";
 
 /**
  * Portfolio Configuration Page
@@ -138,6 +139,9 @@ export default function Configuration() {
         ...formData,
         targetWeights,
       });
+
+      // Invalidate cache, especially recommendations which depend on configuration
+      invalidatePortfolioCache(portfolioId, user?.email);
 
       setMessage("✅ Configuración guardada correctamente");
       setTimeout(() => setMessage(""), 3000);

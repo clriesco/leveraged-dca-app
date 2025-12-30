@@ -4,6 +4,7 @@ import Head from "next/head";
 import { useAuth } from "../../contexts/AuthContext";
 import { createContribution, getPortfoliosByEmail } from "../../lib/api";
 import DashboardSidebar from "../../components/DashboardSidebar";
+import { invalidatePortfolioCache } from "../../lib/hooks/use-portfolio-data";
 
 /**
  * Monthly contribution page - Registers the contribution amount
@@ -88,6 +89,9 @@ export default function Contribution() {
         amount: parseFloat(amount),
         note: note || `Monthly contribution - ${new Date().toLocaleDateString()}`,
       });
+
+      // Invalidate cache so dashboard shows updated data
+      invalidatePortfolioCache(portfolioId, user?.email);
 
       setMessage("✅ ¡Aportación registrada correctamente!");
 

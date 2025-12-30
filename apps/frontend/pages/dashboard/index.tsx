@@ -4,15 +4,17 @@ import Head from "next/head";
 import { useAuth } from "../../contexts/AuthContext";
 import DashboardSidebar from "../../components/DashboardSidebar";
 import {
-  getPortfoliosByEmail,
-  getPortfolioSummary,
-  getPortfolioMetrics,
-  getPortfolioRecommendations,
   PortfolioRecommendationsResponse,
   Recommendation,
   RecommendationPriority,
   PurchaseRecommendation,
 } from "../../lib/api";
+import {
+  usePortfolios,
+  usePortfolioSummary,
+  usePortfolioMetrics,
+  usePortfolioRecommendations,
+} from "../../lib/hooks/use-portfolio-data";
 
 interface Position {
   id: string;
@@ -89,15 +91,44 @@ function Dashboard() {
   const router = useRouter();
   const { user, loading } = useAuth();
 
-  const [portfolioId, setPortfolioId] = useState<string | null>(null);
-  const [summary, setSummary] = useState<PortfolioSummary | null>(null);
-  const [metricsHistory, setMetricsHistory] = useState<MetricsPoint[]>([]);
-  const [recommendations, setRecommendations] =
-    useState<PortfolioRecommendationsResponse | null>(null);
-  const [dataLoading, setDataLoading] = useState(true);
-  const [error, setError] = useState<string | null>(null);
+  // Use SWR hooks for cached data
+  const {
+    portfolios,
+    isLoading: portfoliosLoading,
+    error: portfoliosError,
+  } = usePortfolios();
+  const portfolioId = portfolios.length > 0 ? portfolios[0].id : null;
+
+  const {
+    summary,
+    isLoading: summaryLoading,
+    mutate: refreshSummary,
+  } = usePortfolioSummary(portfolioId);
+  const {
+    metrics: metricsHistory,
+    isLoading: metricsLoading,
+    mutate: refreshMetrics,
+  } = usePortfolioMetrics(portfolioId);
+  const {
+    recommendations,
+    isLoading: recommendationsLoading,
+    mutate: refreshRecommendations,
+  } = usePortfolioRecommendations(portfolioId);
+
   const [historyPage, setHistoryPage] = useState(1);
   const itemsPerPage = 24;
+
+  // Combined loading state
+  const dataLoading =
+    portfoliosLoading ||
+    summaryLoading ||
+    metricsLoading ||
+    recommendationsLoading;
+  const error = portfoliosError
+    ? portfoliosError instanceof Error
+      ? portfoliosError.message
+      : String(portfoliosError)
+    : null;
 
   const historyForTable = useMemo(() => {
     // Sort by date descending (most recent first)
@@ -125,54 +156,12 @@ function Dashboard() {
     }
   }, [user, loading, router]);
 
-  // Load portfolio data
+  // Check if portfolio exists
   useEffect(() => {
-    async function loadData() {
-      if (!user?.email) return;
-
-      setDataLoading(true);
-      setError(null);
-
-      try {
-        // Get user's portfolios
-        const portfolios = await getPortfoliosByEmail(user.email);
-
-        if (!portfolios || portfolios.length === 0) {
-          setError(
-            "No se encontró portfolio. Por favor, contacta con soporte."
-          );
-          setDataLoading(false);
-          return;
-        }
-
-        const portfolio = portfolios[0];
-        setPortfolioId(portfolio.id);
-
-        // Get portfolio summary, metrics, and recommendations
-        const [summaryData, metricsData, recommendationsData] =
-          await Promise.all([
-            getPortfolioSummary(portfolio.id),
-            getPortfolioMetrics(portfolio.id),
-            getPortfolioRecommendations(portfolio.id).catch(() => null), // Don't fail if recommendations fail
-          ]);
-
-        setSummary(summaryData);
-        setMetricsHistory(metricsData);
-        setRecommendations(recommendationsData);
-      } catch (err) {
-        console.error("Error loading portfolio:", err);
-        setError(
-          err instanceof Error ? err.message : "Error al cargar el portfolio"
-        );
-      } finally {
-        setDataLoading(false);
-      }
+    if (!portfoliosLoading && portfolios.length === 0 && user) {
+      // Portfolio will be handled by error state below
     }
-
-    if (user) {
-      loadData();
-    }
-  }, [user]);
+  }, [portfoliosLoading, portfolios.length, user]);
 
   if (loading) {
     return (
@@ -198,6 +187,41 @@ function Dashboard() {
     return null;
   }
 
+  // Show error if no portfolio found
+  if (!portfoliosLoading && portfolios.length === 0) {
+    return (
+      <>
+        <Head>
+          <title>Error - Dashboard</title>
+        </Head>
+        <DashboardSidebar portfolioId={null}>
+          <div
+            style={{
+              display: "flex",
+              justifyContent: "center",
+              alignItems: "center",
+              minHeight: "100vh",
+              flexDirection: "column",
+              gap: "1rem",
+              padding: "2rem",
+            }}
+          >
+            <p style={{ color: "#ef4444", fontSize: "1rem" }}>
+              No se encontró portfolio. Por favor, contacta con soporte.
+            </p>
+          </div>
+        </DashboardSidebar>
+      </>
+    );
+  }
+
+  // Function to manually refresh all data
+  const handleRefresh = () => {
+    refreshSummary();
+    refreshMetrics();
+    refreshRecommendations();
+  };
+
   return (
     <React.Fragment>
       <Head>
@@ -212,22 +236,44 @@ function Dashboard() {
                 marginBottom: "2rem",
                 paddingBottom: "1.5rem",
                 borderBottom: "1px solid #1e293b",
+                display: "flex",
+                justifyContent: "space-between",
+                alignItems: "flex-start",
               }}
             >
-              <h1
+              <div>
+                <h1
+                  style={{
+                    fontSize: "1.875rem",
+                    fontWeight: "700",
+                    color: "#f1f5f9",
+                    marginBottom: "0.25rem",
+                    letterSpacing: "-0.025em",
+                  }}
+                >
+                  Dashboard del Portfolio
+                </h1>
+                <p style={{ color: "#94a3b8", fontSize: "0.875rem" }}>
+                  {user.email}
+                </p>
+              </div>
+              <button
+                onClick={handleRefresh}
+                disabled={dataLoading}
                 style={{
-                  fontSize: "1.875rem",
-                  fontWeight: "700",
-                  color: "#f1f5f9",
-                  marginBottom: "0.25rem",
-                  letterSpacing: "-0.025em",
+                  padding: "0.5rem 1rem",
+                  background: "#1e293b",
+                  border: "1px solid #334155",
+                  borderRadius: "6px",
+                  color: "#e2e8f0",
+                  fontSize: "0.875rem",
+                  cursor: dataLoading ? "not-allowed" : "pointer",
+                  opacity: dataLoading ? 0.5 : 1,
                 }}
+                title="Actualizar datos"
               >
-                Dashboard del Portfolio
-              </h1>
-              <p style={{ color: "#94a3b8", fontSize: "0.875rem" }}>
-                {user.email}
-              </p>
+                {dataLoading ? "Actualizando..." : "🔄 Actualizar"}
+              </button>
             </div>
 
             {/* Loading State - Skeletons */}
@@ -1203,7 +1249,7 @@ function Dashboard() {
                         </tr>
                       </thead>
                       <tbody>
-                        {summary.positions.map((pos, idx) => (
+                        {summary.positions.map((pos: Position, idx: number) => (
                           <tr
                             key={pos.id}
                             style={{

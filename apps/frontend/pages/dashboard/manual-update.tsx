@@ -10,6 +10,7 @@ import {
   SymbolSearchResult,
 } from "../../lib/api";
 import DashboardSidebar from "../../components/DashboardSidebar";
+import { invalidatePortfolioCache } from "../../lib/hooks/use-portfolio-data";
 
 interface Asset {
   id: string;
@@ -288,6 +289,9 @@ export default function ManualUpdate() {
 
       const response = await updatePositions(updateData);
       console.log("[ManualUpdate] Update response received:", response);
+
+      // Invalidate cache so dashboard shows updated data
+      invalidatePortfolioCache(portfolioId, user?.email);
 
       const newAssetsCount = positions.filter((p) => !p.assetId && p.assetSymbol).length;
       if (newAssetsCount > 0) {

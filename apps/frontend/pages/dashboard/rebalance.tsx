@@ -9,6 +9,7 @@ import {
   RebalanceProposal,
 } from "../../lib/api";
 import DashboardSidebar from "../../components/DashboardSidebar";
+import { invalidatePortfolioCache } from "../../lib/hooks/use-portfolio-data";
 
 /**
  * Rebalance page - Shows algorithm-calculated optimal allocation
@@ -78,6 +79,10 @@ export default function Rebalance() {
 
     try {
       await acceptRebalanceProposal(portfolioId, proposal);
+      
+      // Invalidate cache so dashboard shows updated data
+      invalidatePortfolioCache(portfolioId, user?.email);
+      
       setMessage("✅ ¡Rebalance aceptado! Nueva composición guardada.");
 
       setTimeout(() => {
