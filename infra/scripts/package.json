@@ -1,0 +1,21 @@
+{
+  "name": "leveraged-dca-scripts",
+  "version": "0.1.0",
+  "private": true,
+  "scripts": {
+    "seed:demo": "npx ts-node seed-demo-portfolio.ts",
+    "prices:ingest": "npx ts-node price-ingestion.ts",
+    "metrics:refresh": "npx ts-node metrics-refresh.ts",
+    "daily:check": "npx ts-node daily-check.ts"
+  },
+  "dependencies": {
+    "@prisma/client": "^5.22.0",
+    "dotenv": "^16.4.5"
+  },
+  "devDependencies": {
+    "@types/node": "^20.0.0",
+    "prisma": "^5.22.0",
+    "ts-node": "^10.9.2",
+    "typescript": "^5.4.2"
+  }
+}

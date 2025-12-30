@@ -1,0 +1,710 @@
+import React, { useState, useEffect } from "react";
+import { useRouter } from "next/router";
+import Head from "next/head";
+import { useAuth } from "../../contexts/AuthContext";
+import {
+  getPortfoliosByEmail,
+  getRebalanceProposal,
+  acceptRebalanceProposal,
+  RebalanceProposal,
+} from "../../lib/api";
+import DashboardSidebar from "../../components/DashboardSidebar";
+
+/**
+ * Rebalance page - Shows algorithm-calculated optimal allocation
+ * Implements the full rebalancing logic from BacktestHistorical.ipynb
+ */
+export default function Rebalance() {
+  const router = useRouter();
+  const { user, loading } = useAuth();
+
+  const [portfolioId, setPortfolioId] = useState<string | null>(null);
+  const [proposal, setProposal] = useState<RebalanceProposal | null>(null);
+  const [isCalculating, setIsCalculating] = useState(true);
+  const [isSubmitting, setIsSubmitting] = useState(false);
+  const [message, setMessage] = useState("");
+  const [error, setError] = useState("");
+
+  // Load portfolio and calculate proposal
+  useEffect(() => {
+    async function loadAndCalculate() {
+      if (!user?.email) return;
+
+      setIsCalculating(true);
+      setError("");
+
+      try {
+        // Get portfolioId from URL or fetch
+        let pId = router.query.portfolioId as string;
+
+        if (!pId) {
+          const portfolios = await getPortfoliosByEmail(user.email);
+          if (portfolios && portfolios.length > 0) {
+            pId = portfolios[0].id;
+          } else {
+            setError("No se encontró portfolio");
+            setIsCalculating(false);
+            return;
+          }
+        }
+
+        setPortfolioId(pId);
+
+        // Get rebalance proposal from backend
+        const proposalData = await getRebalanceProposal(pId);
+        setProposal(proposalData);
+      } catch (err) {
+        console.error("Error calculating proposal:", err);
+        setError(
+          err instanceof Error ? err.message : "Error al calcular la propuesta"
+        );
+      } finally {
+        setIsCalculating(false);
+      }
+    }
+
+    if (!loading && !user) {
+      router.push("/");
+    } else if (user) {
+      loadAndCalculate();
+    }
+  }, [user, loading, router, router.query.portfolioId]);
+
+  const handleAccept = async () => {
+    if (!portfolioId || !proposal) return;
+
+    setIsSubmitting(true);
+    setError("");
+
+    try {
+      await acceptRebalanceProposal(portfolioId, proposal);
+      setMessage("✅ ¡Rebalance aceptado! Nueva composición guardada.");
+
+      setTimeout(() => {
+        router.push("/dashboard");
+      }, 2000);
+    } catch (err) {
+      setError(err instanceof Error ? err.message : "Error al guardar el rebalance");
+    } finally {
+      setIsSubmitting(false);
+    }
+  };
+
+
+  if (loading) {
+    return (
+      <>
+        <Head>
+          <title>Cargando...</title>
+        </Head>
+        <div
+          style={{
+            display: "flex",
+            justifyContent: "center",
+            alignItems: "center",
+            minHeight: "100vh",
+          }}
+        >
+          <p style={{ color: "white", fontSize: "1.2rem" }}>Cargando...</p>
+        </div>
+      </>
+    );
+  }
+
+  if (!user) {
+    return null;
+  }
+
+  return (
+    <>
+      <Head>
+        <title>Rebalancear Portfolio - Leveraged DCA App</title>
+      </Head>
+      <DashboardSidebar portfolioId={portfolioId}>
+        <div style={{ padding: "2rem" }}>
+          <div style={{ maxWidth: "1200px", margin: "0 auto" }}>
+            {/* Header */}
+            <div
+              style={{
+                marginBottom: "2rem",
+                paddingBottom: "1.5rem",
+                borderBottom: "1px solid #1e293b",
+              }}
+            >
+              <h1
+                style={{
+                  fontSize: "1.875rem",
+                  fontWeight: "700",
+                  color: "#f1f5f9",
+                  marginBottom: "0.25rem",
+                  letterSpacing: "-0.025em",
+                }}
+              >
+                Rebalancear Portfolio
+              </h1>
+              <p style={{ color: "#94a3b8", fontSize: "0.875rem" }}>
+                Asignación óptima calculada por algoritmo basada en las condiciones actuales del mercado
+              </p>
+            </div>
+
+          {isCalculating ? (
+            <div
+              style={{
+                background: "rgba(255, 255, 255, 0.1)",
+                borderRadius: "16px",
+                padding: "4rem 2rem",
+                backdropFilter: "blur(10px)",
+                textAlign: "center",
+              }}
+            >
+              <p
+                style={{
+                  color: "white",
+                  fontSize: "1.2rem",
+                  marginBottom: "1rem",
+                }}
+              >
+                Calculando asignación óptima...
+              </p>
+              <p style={{ color: "rgba(255, 255, 255, 0.6)" }}>
+                Analizando señales de drawdown, desviación de pesos y volatilidad
+              </p>
+            </div>
+          ) : proposal ? (
+            <>
+              {/* Check if rebalance is needed */}
+              {(() => {
+                const allHold = proposal.positions.every((pos) => pos.action === "HOLD");
+                const noBorrowIncrease = Math.abs(proposal.summary.borrowIncrease) < 0.01;
+                const needsRebalance = !(allHold && noBorrowIncrease);
+                
+                return !needsRebalance ? (
+                  <div
+                    style={{
+                      background: "rgba(251, 191, 36, 0.1)",
+                      border: "1px solid rgba(251, 191, 36, 0.3)",
+                      borderRadius: "12px",
+                      padding: "1.5rem",
+                      marginBottom: "1.5rem",
+                      textAlign: "center",
+                    }}
+                  >
+                    <p
+                      style={{
+                        color: "rgba(255, 255, 255, 0.9)",
+                        fontSize: "1.1rem",
+                        fontWeight: "600",
+                        margin: 0,
+                      }}
+                    >
+                      ✅ No es necesario rebalancear
+                    </p>
+                    <p
+                      style={{
+                        color: "rgba(255, 255, 255, 0.7)",
+                        fontSize: "0.9rem",
+                        marginTop: "0.5rem",
+                        margin: 0,
+                      }}
+                    >
+                      Todos los activos están en su posición correcta y no se requiere aumentar la exposición.
+                    </p>
+                  </div>
+                ) : null;
+              })()}
+
+              {/* Current vs Target Summary */}
+              <div
+                style={{
+                  display: "grid",
+                  gridTemplateColumns: "1fr 1fr",
+                  gap: "1rem",
+                  marginBottom: "1.5rem",
+                }}
+              >
+                <div
+                  style={{
+                    background: "rgba(255, 255, 255, 0.1)",
+                    borderRadius: "12px",
+                    padding: "1.5rem",
+                  }}
+                >
+                    <h3
+                    style={{
+                      color: "rgba(255, 255, 255, 0.7)",
+                      fontSize: "0.9rem",
+                      marginBottom: "1rem",
+                    }}
+                  >
+                    ESTADO ACTUAL
+                  </h3>
+                  <div style={{ marginBottom: "0.5rem" }}>
+                    <span style={{ color: "rgba(255, 255, 255, 0.6)" }}>
+                      Equity:{" "}
+                    </span>
+                    <span style={{ color: "white", fontWeight: "600" }}>
+                      $
+                      {proposal.currentEquity.toLocaleString(undefined, {
+                        maximumFractionDigits: 0,
+                      })}
+                    </span>
+                  </div>
+                  <div style={{ marginBottom: "0.5rem" }}>
+                    <span style={{ color: "rgba(255, 255, 255, 0.6)" }}>
+                      Exposure:{" "}
+                    </span>
+                    <span style={{ color: "white", fontWeight: "600" }}>
+                      $
+                      {proposal.currentExposure.toLocaleString(undefined, {
+                        maximumFractionDigits: 0,
+                      })}
+                    </span>
+                  </div>
+                  <div>
+                    <span style={{ color: "rgba(255, 255, 255, 0.6)" }}>
+                      Leverage:{" "}
+                    </span>
+                    <span style={{ color: "white", fontWeight: "600" }}>
+                      {proposal.currentLeverage.toFixed(2)}x
+                    </span>
+                  </div>
+                </div>
+
+                <div
+                  style={{
+                    background: "rgba(102, 126, 234, 0.1)",
+                    border: "1px solid rgba(102, 126, 234, 0.3)",
+                    borderRadius: "12px",
+                    padding: "1.5rem",
+                  }}
+                >
+                  <h3
+                    style={{
+                      color: "rgba(255, 255, 255, 0.7)",
+                      fontSize: "0.9rem",
+                      marginBottom: "1rem",
+                    }}
+                  >
+                    DESPUÉS DEL REBALANCE
+                  </h3>
+                  <div style={{ marginBottom: "0.5rem" }}>
+                    <span style={{ color: "rgba(255, 255, 255, 0.6)" }}>
+                      Equity:{" "}
+                    </span>
+                    <span style={{ color: "#4ade80", fontWeight: "600" }}>
+                      $
+                      {proposal.summary.newEquity.toLocaleString(undefined, {
+                        maximumFractionDigits: 0,
+                      })}
+                    </span>
+                  </div>
+                  <div style={{ marginBottom: "0.5rem" }}>
+                    <span style={{ color: "rgba(255, 255, 255, 0.6)" }}>
+                      Exposición:{" "}
+                    </span>
+                    <span style={{ color: "white", fontWeight: "600" }}>
+                      $
+                      {proposal.summary.newExposure.toLocaleString(undefined, {
+                        maximumFractionDigits: 0,
+                      })}
+                    </span>
+                  </div>
+                  <div>
+                    <span style={{ color: "rgba(255, 255, 255, 0.6)" }}>
+                      Leverage:{" "}
+                    </span>
+                    <span style={{ color: "white", fontWeight: "600" }}>
+                      {proposal.summary.newLeverage.toFixed(2)}x
+                    </span>
+                  </div>
+                </div>
+              </div>
+
+              {/* Weights Used */}
+              <div
+                style={{
+                  background: "rgba(255, 255, 255, 0.05)",
+                  borderRadius: "12px",
+                  padding: "1rem 1.5rem",
+                  marginBottom: "1.5rem",
+                  display: "flex",
+                  alignItems: "center",
+                  justifyContent: "space-between",
+                  flexWrap: "wrap",
+                  gap: "1rem",
+                }}
+              >
+                <div>
+                  <span
+                    style={{
+                      color: "rgba(255, 255, 255, 0.6)",
+                      fontSize: "0.85rem",
+                    }}
+                  >
+                    Pesos:{" "}
+                  </span>
+                  <span
+                    style={{
+                      color: proposal.dynamicWeightsComputed
+                        ? "#a78bfa"
+                        : "#94a3b8",
+                      fontSize: "0.85rem",
+                    }}
+                  >
+                    {proposal.dynamicWeightsComputed
+                      ? "🧠 Dinámicos (Optimizados Sharpe)"
+                      : "📌 Estáticos (PORTFOLIO_INITIAL)"}
+                  </span>
+                </div>
+                <div style={{ display: "flex", gap: "1rem", flexWrap: "wrap" }}>
+                  {Object.entries(proposal.weightsUsed).map(
+                    ([symbol, weight]) => (
+                      <span
+                        key={symbol}
+                        style={{
+                          color: "rgba(255, 255, 255, 0.7)",
+                          fontSize: "0.85rem",
+                        }}
+                      >
+                        {symbol}: {((weight as number) * 100).toFixed(0)}%
+                      </span>
+                    )
+                  )}
+                </div>
+              </div>
+
+              {/* Instructions Table */}
+              <div
+                style={{
+                  background: "rgba(255, 255, 255, 0.1)",
+                  borderRadius: "16px",
+                  padding: "2rem",
+                  backdropFilter: "blur(10px)",
+                  marginBottom: "1.5rem",
+                }}
+              >
+                  <h2
+                  style={{
+                    fontSize: "1.25rem",
+                    fontWeight: "bold",
+                    color: "white",
+                    marginBottom: "1.5rem",
+                  }}
+                >
+                  📋 Instrucciones de Rebalance
+                </h2>
+
+                <div
+                  style={{
+                    display: "flex",
+                    flexDirection: "column",
+                    gap: "1rem",
+                  }}
+                >
+                  {proposal.positions.map((pos, idx) => (
+                    <div
+                      key={idx}
+                      style={{
+                        background:
+                          pos.action === "BUY"
+                            ? "rgba(74, 222, 128, 0.1)"
+                            : pos.action === "SELL"
+                            ? "rgba(248, 113, 113, 0.1)"
+                            : "rgba(255, 255, 255, 0.05)",
+                        border:
+                          pos.action === "BUY"
+                            ? "1px solid rgba(74, 222, 128, 0.3)"
+                            : pos.action === "SELL"
+                            ? "1px solid rgba(248, 113, 113, 0.3)"
+                            : "1px solid rgba(255, 255, 255, 0.1)",
+                        borderRadius: "12px",
+                        padding: "1.25rem",
+                      }}
+                    >
+                      <div
+                        style={{
+                          display: "flex",
+                          justifyContent: "space-between",
+                          alignItems: "center",
+                        }}
+                      >
+                        <div>
+                          <div
+                            style={{
+                              fontWeight: "600",
+                              color: "white",
+                              fontSize: "1.1rem",
+                            }}
+                          >
+                            {pos.assetName}{" "}
+                            <span
+                              style={{
+                                color: "rgba(255, 255, 255, 0.5)",
+                                fontWeight: "400",
+                              }}
+                            >
+                              ({pos.assetSymbol})
+                            </span>
+                          </div>
+                          <div
+                            style={{
+                              color: "rgba(255, 255, 255, 0.6)",
+                              fontSize: "0.9rem",
+                              marginTop: "0.25rem",
+                            }}
+                          >
+                            Peso: {(pos.currentWeight * 100).toFixed(1)}% →{" "}
+                            {(pos.targetWeight * 100).toFixed(0)}%
+                          </div>
+                        </div>
+
+                        <div style={{ textAlign: "right" }}>
+                          <div
+                            style={{
+                              fontSize: "1.5rem",
+                              fontWeight: "700",
+                              color:
+                                pos.action === "BUY"
+                                  ? "#4ade80"
+                                  : pos.action === "SELL"
+                                  ? "#f87171"
+                                  : "white",
+                            }}
+                          >
+                            {pos.action}
+                          </div>
+                          {pos.action !== "HOLD" && (
+                            <>
+                              <div
+                                style={{
+                                  fontSize: "1.25rem",
+                                  fontWeight: "600",
+                                  color: "white",
+                                }}
+                              >
+                                {Math.abs(pos.deltaQuantity).toLocaleString(
+                                  undefined,
+                                  { maximumFractionDigits: 6 }
+                                )}{" "}
+                                <span
+                                  style={{
+                                    color: "rgba(255, 255, 255, 0.6)",
+                                    fontSize: "0.9rem",
+                                  }}
+                                >
+                                  unidades
+                                </span>
+                              </div>
+                              <div
+                                style={{
+                                  color: "rgba(255, 255, 255, 0.5)",
+                                  fontSize: "0.85rem",
+                                }}
+                              >
+                                @ $
+                                {pos.currentPrice.toLocaleString(undefined, {
+                                  maximumFractionDigits: 2,
+                                })}{" "}
+                                ≈ $
+                                {Math.abs(pos.deltaValue).toLocaleString(
+                                  undefined,
+                                  { maximumFractionDigits: 0 }
+                                )}
+                              </div>
+                            </>
+                          )}
+                        </div>
+                      </div>
+
+                      <div
+                        style={{
+                          marginTop: "1rem",
+                          paddingTop: "1rem",
+                          borderTop: "1px solid rgba(255, 255, 255, 0.1)",
+                          display: "flex",
+                          justifyContent: "space-between",
+                          color: "rgba(255, 255, 255, 0.6)",
+                          fontSize: "0.85rem",
+                        }}
+                      >
+                        <span>
+                          Actual:{" "}
+                          {pos.currentQuantity.toLocaleString(undefined, {
+                            maximumFractionDigits: 6,
+                          })}{" "}
+                          ($
+                          {pos.currentValue.toLocaleString(undefined, {
+                            maximumFractionDigits: 0,
+                          })}
+                          )
+                        </span>
+                        <span>→</span>
+                        <span>
+                          Objetivo:{" "}
+                          {pos.targetQuantity.toLocaleString(undefined, {
+                            maximumFractionDigits: 6,
+                          })}{" "}
+                          ($
+                          {pos.targetValue.toLocaleString(undefined, {
+                            maximumFractionDigits: 0,
+                          })}
+                          )
+                        </span>
+                      </div>
+                    </div>
+                  ))}
+                </div>
+              </div>
+
+              {/* Equity/Borrow Breakdown */}
+              {(proposal.summary.equityUsedFromContribution > 0 ||
+                proposal.summary.borrowIncrease > 0) && (
+                <div
+                  style={{
+                    background: "rgba(251, 191, 36, 0.1)",
+                    border: "1px solid rgba(251, 191, 36, 0.3)",
+                    borderRadius: "12px",
+                    padding: "1rem",
+                    marginBottom: "1.5rem",
+                  }}
+                >
+                  <p
+                    style={{
+                      color: "rgba(255, 255, 255, 0.8)",
+                      fontSize: "0.9rem",
+                      margin: 0,
+                    }}
+                  >
+                    💰 <strong>Desglose de origen:</strong>{" "}
+                    {proposal.summary.equityUsedFromContribution > 0 && (
+                      <>
+                        $
+                        {proposal.summary.equityUsedFromContribution.toLocaleString(
+                          undefined,
+                          { maximumFractionDigits: 0 }
+                        )}{" "}
+                        de equity
+                      </>
+                    )}
+                    {proposal.summary.equityUsedFromContribution > 0 &&
+                      proposal.summary.borrowIncrease > 0 && (
+                        <> + </>
+                      )}
+                    {proposal.summary.borrowIncrease > 0 && (
+                      <>
+                        $
+                        {proposal.summary.borrowIncrease.toLocaleString(
+                          undefined,
+                          { maximumFractionDigits: 0 }
+                        )}{" "}
+                        de préstamo
+                      </>
+                    )}
+                    {proposal.summary.borrowIncrease < 0 && (
+                      <>
+                        Reducción de préstamo: $
+                        {Math.abs(
+                          proposal.summary.borrowIncrease
+                        ).toLocaleString(undefined, {
+                          maximumFractionDigits: 0,
+                        })}
+                      </>
+                    )}
+                  </p>
+                </div>
+              )}
+
+              {/* Info box */}
+              <div
+                style={{
+                  background: "rgba(102, 126, 234, 0.1)",
+                  border: "1px solid rgba(102, 126, 234, 0.3)",
+                  borderRadius: "12px",
+                  padding: "1rem",
+                  marginBottom: "1.5rem",
+                }}
+              >
+                <p
+                  style={{
+                    color: "rgba(255, 255, 255, 0.8)",
+                    fontSize: "0.9rem",
+                    margin: 0,
+                  }}
+                >
+                  💡 Ejecuta estas operaciones en tu broker, luego haz clic en
+                  &quot;Aceptar&quot; para guardar la nueva composición.
+                </p>
+              </div>
+
+              {/* Action Buttons */}
+              {(() => {
+                const allHold = proposal.positions.every((pos) => pos.action === "HOLD");
+                const noBorrowIncrease = Math.abs(proposal.summary.borrowIncrease) < 0.01;
+                const needsRebalance = !(allHold && noBorrowIncrease);
+                const isDisabled = isSubmitting || !needsRebalance;
+
+                return (
+                  <div style={{ display: "flex", gap: "1rem" }}>
+                    <button
+                      onClick={handleAccept}
+                      disabled={isDisabled}
+                      style={{
+                        flex: 1,
+                        padding: "1rem",
+                        background:
+                          isDisabled
+                            ? "rgba(255, 255, 255, 0.1)"
+                            : "linear-gradient(135deg, #10b981 0%, #059669 100%)",
+                        color: isDisabled ? "rgba(255, 255, 255, 0.5)" : "white",
+                        border: isDisabled ? "1px solid rgba(255, 255, 255, 0.1)" : "none",
+                        borderRadius: "8px",
+                        fontSize: "1rem",
+                        fontWeight: "600",
+                        opacity: isDisabled ? 0.5 : 1,
+                        cursor: isDisabled ? "not-allowed" : "pointer",
+                      }}
+                    >
+                      {isSubmitting ? "Guardando..." : "✓ Aceptar y Guardar"}
+                    </button>
+                  </div>
+                );
+              })()}
+            </>
+          ) : null}
+
+          {message && (
+            <div
+              style={{
+                marginTop: "1rem",
+                padding: "1rem",
+                background: "rgba(74, 222, 128, 0.2)",
+                color: "#4ade80",
+                borderRadius: "8px",
+                border: "1px solid rgba(74, 222, 128, 0.3)",
+              }}
+            >
+              {message}
+            </div>
+          )}
+
+          {error && (
+            <div
+              style={{
+                marginTop: "1rem",
+                padding: "1rem",
+                background: "rgba(248, 113, 113, 0.2)",
+                color: "#f87171",
+                borderRadius: "8px",
+                border: "1px solid rgba(248, 113, 113, 0.3)",
+              }}
+            >
+              {error}
+            </div>
+          )}
+          </div>
+        </div>
+      </DashboardSidebar>
+    </>
+  );
+}
+

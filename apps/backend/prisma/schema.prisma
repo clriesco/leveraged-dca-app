@@ -1,0 +1,227 @@
+// Prisma schema for Leveraged DCA App
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider = "postgresql"
+  url      = env("DATABASE_URL")
+  directUrl = env("DIRECT_URL")
+}
+
+// User model (extends Supabase auth.users)
+model User {
+  id        String   @id @default(uuid())
+  email     String   @unique
+  createdAt DateTime @default(now()) @map("created_at")
+  updatedAt DateTime @updatedAt @map("updated_at")
+
+  // Personal information
+  fullName String? @map("full_name")
+
+  // Notification preferences
+  notifyOnRecommendations Boolean @default(true) @map("notify_on_recommendations")
+  notifyOnContributions   Boolean @default(true) @map("notify_on_contributions")
+  notifyOnLeverageAlerts   Boolean @default(true) @map("notify_on_leverage_alerts")
+  notifyOnRebalance       Boolean @default(true) @map("notify_on_rebalance")
+
+  portfolios Portfolio[]
+
+  @@map("users")
+}
+
+// Portfolio model
+model Portfolio {
+  id             String   @id @default(uuid())
+  userId         String   @map("user_id")
+  name           String
+  baseCurrency   String   @default("USD") @map("base_currency")
+  leverageMin    Float    @default(2.5) @map("leverage_min")
+  leverageMax    Float    @default(4.0) @map("leverage_max")
+  leverageTarget Float    @default(3.0) @map("leverage_target")
+  initialCapital Float    @map("initial_capital")
+  createdAt      DateTime @default(now()) @map("created_at")
+  updatedAt      DateTime @updatedAt @map("updated_at")
+
+  // Contribution configuration
+  monthlyContribution    Float?   @map("monthly_contribution")
+  contributionFrequency  String   @default("monthly") @map("contribution_frequency") // 'weekly', 'biweekly', 'monthly', 'quarterly'
+  contributionDayOfMonth Int      @default(1) @map("contribution_day_of_month") // Day of month (1-31) for monthly/quarterly, or day of week (0-6, 0=Sunday) for weekly/biweekly
+  contributionEnabled    Boolean  @default(true) @map("contribution_enabled")
+
+  // Target weights (JSON: {"SPY": 0.6, "GLD": 0.25, "BTC-USD": 0.15})
+  targetWeightsJson String? @map("target_weights_json") @db.Text
+
+  // Weight constraints
+  maxWeight Float @default(0.4) @map("max_weight")
+  minWeight Float @default(0.05) @map("min_weight")
+
+  // Risk parameters
+  maintenanceMarginRatio Float @default(0.05) @map("maintenance_margin_ratio")
+
+  // Deploy signal thresholds
+  drawdownRedeployThreshold   Float @default(0.12) @map("drawdown_redeploy_threshold")
+  weightDeviationThreshold    Float @default(0.05) @map("weight_deviation_threshold")
+  volatilityLookbackDays      Int   @default(63) @map("volatility_lookback_days")
+  volatilityRedeployThreshold Float @default(0.18) @map("volatility_redeploy_threshold")
+  gradualDeployFactor         Float @default(0.5) @map("gradual_deploy_factor")
+
+  // Optimization parameters
+  useDynamicSharpeRebalance Boolean @default(true) @map("use_dynamic_sharpe_rebalance")
+  meanReturnShrinkage       Float   @default(0.6) @map("mean_return_shrinkage")
+  riskFreeRate              Float   @default(0.02) @map("risk_free_rate")
+
+  user                User                   @relation(fields: [userId], references: [id], onDelete: Cascade)
+  positions           PortfolioPosition[]
+  contributions       MonthlyContribution[]
+  rebalanceEvents     RebalanceEvent[]
+  metricsTimeseries   MetricsTimeseries[]
+  dailyMetrics        DailyMetric[]
+
+  @@map("portfolios")
+}
+
+// Asset model (gold, BTC, indices, etc.)
+model Asset {
+  id          String   @id @default(uuid())
+  symbol      String   @unique
+  name        String
+  assetType   String   @map("asset_type") // 'crypto', 'commodity', 'index', etc.
+  metadataJson String? @map("metadata_json") @db.Text
+  createdAt   DateTime @default(now()) @map("created_at")
+
+  positions        PortfolioPosition[]
+  prices           AssetPrice[]
+  rebalancePositions RebalancePosition[]
+
+  @@map("assets")
+}
+
+// Portfolio positions (current holdings)
+model PortfolioPosition {
+  id           String   @id @default(uuid())
+  portfolioId  String   @map("portfolio_id")
+  assetId      String   @map("asset_id")
+  quantity     Float
+  avgPrice     Float    @map("avg_price")
+  exposureUsd  Float    @map("exposure_usd")
+  updatedAt    DateTime @updatedAt @map("updated_at")
+
+  portfolio Portfolio @relation(fields: [portfolioId], references: [id], onDelete: Cascade)
+  asset     Asset     @relation(fields: [assetId], references: [id])
+
+  @@unique([portfolioId, assetId])
+  @@map("portfolio_positions")
+}
+
+// Monthly contributions
+model MonthlyContribution {
+  id             String   @id @default(uuid())
+  portfolioId    String   @map("portfolio_id")
+  amount         Float
+  contributedAt  DateTime @default(now()) @map("contributed_at")
+  note           String?
+
+  // Deployment tracking
+  deployed         Boolean   @default(false) @map("deployed")
+  deployedAt       DateTime? @map("deployed_at")
+  deployedAmount   Float     @default(0) @map("deployed_amount")
+  deploymentReason String?   @map("deployment_reason") // 'drawdown', 'weight_deviation', 'volatility', 'manual', 'leverage_low'
+
+  portfolio       Portfolio         @relation(fields: [portfolioId], references: [id], onDelete: Cascade)
+  rebalanceEvents RebalanceEvent[]
+
+  @@map("monthly_contributions")
+}
+
+// Rebalance events
+model RebalanceEvent {
+  id               String   @id @default(uuid())
+  portfolioId      String   @map("portfolio_id")
+  contributionId   String?  @map("contribution_id")
+  triggeredBy      String   @map("triggered_by") // 'user', 'auto', etc.
+  targetLeverage   Float    @map("target_leverage")
+  createdAt        DateTime @default(now()) @map("created_at")
+
+  portfolio    Portfolio             @relation(fields: [portfolioId], references: [id], onDelete: Cascade)
+  contribution MonthlyContribution?  @relation(fields: [contributionId], references: [id])
+  positions    RebalancePosition[]
+
+  @@map("rebalance_events")
+}
+
+// Rebalance positions (target weights and deltas)
+model RebalancePosition {
+  id               String  @id @default(uuid())
+  rebalanceEventId String  @map("rebalance_event_id")
+  assetId          String  @map("asset_id")
+  targetWeight     Float   @map("target_weight")
+  targetUsd        Float   @map("target_usd")
+  deltaQuantity    Float   @map("delta_quantity")
+
+  rebalanceEvent RebalanceEvent @relation(fields: [rebalanceEventId], references: [id], onDelete: Cascade)
+  asset          Asset          @relation(fields: [assetId], references: [id])
+
+  @@map("rebalance_positions")
+}
+
+// Asset prices (daily historical data)
+model AssetPrice {
+  id        String   @id @default(uuid())
+  assetId   String   @map("asset_id")
+  date      DateTime @db.Date
+  close     Float
+  adjClose  Float?   @map("adj_close")
+  source    String   @default("yfinance")
+  createdAt DateTime @default(now()) @map("created_at")
+
+  asset Asset @relation(fields: [assetId], references: [id], onDelete: Cascade)
+
+  @@unique([assetId, date])
+  @@index([assetId, date])
+  @@map("asset_prices")
+}
+
+// Metrics timeseries (monthly portfolio metrics snapshots)
+model MetricsTimeseries {
+  id           String   @id @default(uuid())
+  portfolioId  String   @map("portfolio_id")
+  date         DateTime @db.Date
+  equity       Float
+  exposure     Float
+  leverage     Float
+  sharpe       Float?
+  drawdown     Float?
+  borrowedAmount Float? @map("borrowed_amount")
+  marginRatio    Float? @map("margin_ratio")
+  metadataJson String?  @map("metadata_json") @db.Text
+  createdAt    DateTime @default(now()) @map("created_at")
+
+  portfolio Portfolio @relation(fields: [portfolioId], references: [id], onDelete: Cascade)
+
+  @@unique([portfolioId, date])
+  @@index([portfolioId, date])
+  @@map("metrics_timeseries")
+}
+
+// Daily metrics (for daily tracking)
+model DailyMetric {
+  id             String   @id @default(uuid())
+  portfolioId    String   @map("portfolio_id")
+  date           DateTime @db.Date
+  equity         Float
+  exposure       Float
+  leverage       Float
+  drawdown       Float?
+  borrowedAmount Float?   @map("borrowed_amount")
+  marginRatio    Float?   @map("margin_ratio")
+  peakEquity     Float?   @map("peak_equity")
+  createdAt      DateTime @default(now()) @map("created_at")
+
+  portfolio Portfolio @relation(fields: [portfolioId], references: [id], onDelete: Cascade)
+
+  @@unique([portfolioId, date])
+  @@index([portfolioId, date])
+  @@map("daily_metrics")
+}
+

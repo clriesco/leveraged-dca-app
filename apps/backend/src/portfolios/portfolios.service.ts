@@ -1,0 +1,496 @@
+import { Injectable, NotFoundException } from "@nestjs/common";
+import { PrismaService } from "../prisma/prisma.service";
+
+interface DailyHistoryEntry {
+  date: string;
+  equity: number;
+  exposure: number;
+}
+
+const RISK_FREE_RATE = 0.02;
+
+@Injectable()
+export class PortfoliosService {
+  constructor(private readonly prisma: PrismaService) {}
+
+  /**
+   * Find portfolios by user email
+   */
+  async findByUserEmail(email: string) {
+    const user = await this.prisma.user.findUnique({
+      where: { email },
+      include: {
+        portfolios: {
+          include: {
+            positions: {
+              include: { asset: true },
+            },
+          },
+        },
+      },
+    });
+
+    if (!user) {
+      return [];
+    }
+
+    return user.portfolios;
+  }
+
+  /**
+   * Find portfolio by ID with positions and recent contributions
+   */
+  async findById(id: string) {
+    const portfolio = await this.prisma.portfolio.findUnique({
+      where: { id },
+      include: {
+        positions: {
+          include: { asset: true },
+        },
+        contributions: {
+          orderBy: { contributedAt: "desc" },
+          take: 10,
+        },
+      },
+    });
+
+    if (!portfolio) {
+      throw new NotFoundException("Portfolio not found");
+    }
+
+    return portfolio;
+  }
+
+  /**
+   * Get metrics history for a portfolio, enriched with contributions and metadata
+   */
+  async getMetrics(portfolioId: string) {
+    const metrics = await this.executeWithRetry(() =>
+      this.prisma.metricsTimeseries.findMany({
+        where: { portfolioId },
+        orderBy: { date: "asc" },
+      })
+    );
+
+    const contributions = await this.executeWithRetry(() =>
+      this.prisma.monthlyContribution.findMany({
+        where: { portfolioId },
+        orderBy: { contributedAt: "asc" },
+      })
+    );
+
+    const contributionsByDate = new Map<string, number>();
+    contributions.forEach((contribution) => {
+      const key = contribution.contributedAt.toISOString().split("T")[0];
+      contributionsByDate.set(
+        key,
+        (contributionsByDate.get(key) || 0) + contribution.amount
+      );
+    });
+
+    return metrics.map((metric, index) => {
+      const previous = index > 0 ? metrics[index - 1] : null;
+      const key = metric.date.toISOString().split("T")[0];
+      const contribution = contributionsByDate.get(key) || 0;
+      const pnl =
+        previous && previous.equity
+          ? metric.equity - previous.equity - contribution
+          : 0;
+      const pnlPercent =
+        previous && previous.equity ? (pnl / previous.equity) * 100 : 0;
+
+      let metadata: Record<string, any> | null = null;
+      if (metric.metadataJson) {
+        try {
+          metadata = JSON.parse(metric.metadataJson);
+        } catch (error) {
+          metadata = null;
+        }
+      }
+
+      return {
+        ...metric,
+        contribution,
+        pnl,
+        pnlPercent,
+        metadata,
+      };
+    });
+  }
+
+  async getDailyMetrics(portfolioId: string) {
+    const dailyMetricClient = (this.prisma as any).dailyMetric;
+    return this.executeWithRetry(() =>
+      dailyMetricClient.findMany({
+        where: { portfolioId },
+        orderBy: { date: "asc" },
+      })
+    );
+  }
+
+  /**
+   * Get portfolio summary with latest metrics, positions, and calculated returns
+   */
+  async getSummary(portfolioId: string) {
+    const portfolio = await this.prisma.portfolio.findUnique({
+      where: { id: portfolioId },
+      include: {
+        positions: {
+          include: { asset: true },
+        },
+        contributions: {
+          orderBy: { contributedAt: "asc" },
+        },
+      },
+    });
+
+    if (!portfolio) {
+      throw new NotFoundException("Portfolio not found");
+    }
+
+    // Get latest and first metrics
+    const latestMetrics = await this.prisma.metricsTimeseries.findFirst({
+      where: { portfolioId },
+      orderBy: { date: "desc" },
+    });
+
+    const dailyMetricClient = (this.prisma as any).dailyMetric;
+    const latestDailyMetric: { date: Date; equity: number } | null =
+      dailyMetricClient
+        ? await this.executeWithRetry(() =>
+            dailyMetricClient.findFirst({
+              where: { portfolioId },
+              orderBy: { date: "desc" },
+            })
+          )
+        : null;
+
+    const firstMetrics = await this.prisma.metricsTimeseries.findFirst({
+      where: { portfolioId },
+      orderBy: { date: "asc" },
+    });
+
+    // Calculate total contributions (all)
+    const totalContributions = portfolio.contributions.reduce(
+      (sum, c) => sum + c.amount,
+      0
+    );
+
+    // Calculate pending contributions (not deployed) - for display only
+    // NOTE: Contributions are now marked as deployed immediately when registered,
+    // so pending contributions should be 0 in normal operation
+    const pendingContributions = portfolio.contributions
+      .filter((c: any) => !c.deployed)
+      .reduce((sum: number, c: any) => sum + c.amount, 0);
+
+    // Base equity from metrics (should already include all deployed contributions)
+    // We do NOT add pendingContributions here because:
+    // 1. If contributions are marked as deployed, they're already in equity
+    // 2. If they're not marked as deployed, it's a bug that needs fixing
+    // 3. Adding them here would cause equity to accumulate on every page load
+    const effectiveEquity =
+      latestDailyMetric?.equity ?? latestMetrics?.equity ?? 0;
+
+    // Calculate exposure in REAL-TIME from current positions and latest prices
+    // This ensures accuracy even if metrics are outdated
+    let currentExposure = 0;
+    const latestPrices: Record<string, number> = {};
+
+    for (const position of portfolio.positions) {
+      // Get latest price for this asset
+      const latestPrice = await this.prisma.assetPrice.findFirst({
+        where: { assetId: position.assetId },
+        orderBy: { date: "desc" },
+      });
+      const price = latestPrice?.close || position.avgPrice;
+      latestPrices[position.assetId] = price;
+
+      // Calculate current value of this position
+      const positionValue = position.quantity * price;
+      currentExposure += positionValue;
+
+      // Update position exposureUsd to match current value
+      if (Math.abs(position.exposureUsd - positionValue) > 0.01) {
+        await this.prisma.portfolioPosition.update({
+          where: {
+            portfolioId_assetId: {
+              portfolioId: portfolio.id,
+              assetId: position.assetId,
+            },
+          },
+          data: { exposureUsd: positionValue },
+        });
+      }
+    }
+
+    // Calculate leverage using effective equity and real-time exposure
+    const currentLeverage =
+      effectiveEquity > 0 ? currentExposure / effectiveEquity : 0;
+
+    // NOTE: We do NOT update DailyMetric here - this is a read-only operation
+    // DailyMetric should only be updated by:
+    // 1. ContributionsService (when registering a contribution)
+    // 2. Daily check job (metrics-refresh.ts or daily-check.ts)
+    // 3. RebalanceService (when accepting a rebalance)
+    // Updating here would cause equity to accumulate on every page load!
+
+    const absoluteReturn = effectiveEquity - totalContributions;
+    const percentReturn =
+      totalContributions > 0
+        ? ((effectiveEquity - totalContributions) / totalContributions) * 100
+        : 0;
+
+    // Calculate position weights using real-time exposure
+    const positionsWithWeights = portfolio.positions.map((pos) => {
+      const price = latestPrices[pos.assetId] || pos.avgPrice;
+      const currentValue = pos.quantity * price;
+      return {
+        ...pos,
+        exposureUsd: currentValue, // Use real-time value
+        weight:
+          currentExposure > 0 ? (currentValue / currentExposure) * 100 : 0,
+      };
+    });
+
+    const allMetrics = await this.getMetrics(portfolioId);
+    const analytics = this.calculatePortfolioAnalytics(
+      allMetrics,
+      totalContributions,
+      portfolio.initialCapital
+    );
+
+    return {
+      portfolio: {
+        id: portfolio.id,
+        name: portfolio.name,
+        leverageMin: portfolio.leverageMin,
+        leverageMax: portfolio.leverageMax,
+      },
+      metrics: {
+        equity: effectiveEquity, // Now includes pending contributions
+        exposure: currentExposure,
+        leverage: currentLeverage,
+        totalContributions,
+        pendingContributions, // NEW: Show pending contributions separately
+        absoluteReturn,
+        percentReturn,
+        startDate: firstMetrics?.date ?? undefined,
+        lastUpdate: latestDailyMetric?.date ?? latestMetrics?.date ?? undefined,
+      },
+      positions: positionsWithWeights,
+      analytics,
+    };
+  }
+
+  private normalizeDate(value: string | Date): string {
+    return new Date(value).toISOString().split("T")[0];
+  }
+
+  private buildDailyHistory(metrics: any[]): DailyHistoryEntry[] {
+    const entries: DailyHistoryEntry[] = [];
+
+    metrics.forEach((metric) => {
+      const normalizedDate = this.normalizeDate(metric.date);
+
+      if (metric.metadata?.dailySeries?.length) {
+        metric.metadata.dailySeries.forEach((entry: any) => {
+          entries.push({
+            date: this.normalizeDate(entry.date),
+            equity: entry.equity,
+            exposure: entry.exposure,
+          });
+        });
+      } else {
+        entries.push({
+          date: normalizedDate,
+          equity: metric.equity,
+          exposure: metric.exposure,
+        });
+      }
+    });
+
+    return entries
+      .sort((a, b) => new Date(a.date).getTime() - new Date(b.date).getTime())
+      .filter(
+        (entry, idx, arr) => idx === 0 || entry.date !== arr[idx - 1].date
+      );
+  }
+
+  private calculatePortfolioAnalytics(
+    metricsHistory: any[],
+    totalContributions: number,
+    initialCapital: number
+  ) {
+    const dailyHistory = this.buildDailyHistory(metricsHistory);
+
+    if (dailyHistory.length < 2) {
+      return {
+        capitalFinal: 0,
+        totalInvested: totalContributions,
+        absoluteReturn: 0,
+        totalReturnPercent: 0,
+        cagr: 0,
+        volatility: 0,
+        sharpe: 0,
+        maxDrawdownEquity: 0,
+        maxDrawdownExposure: 0,
+        underwaterDays: 0,
+        bestDay: null,
+        worstDay: null,
+      };
+    }
+
+    const contributionsByDate = new Map<string, number>();
+    metricsHistory.forEach((metric) => {
+      const key = this.normalizeDate(metric.date);
+      const contribution = metric.contribution || 0;
+      if (contribution > 0) {
+        contributionsByDate.set(
+          key,
+          (contributionsByDate.get(key) || 0) + contribution
+        );
+      }
+    });
+
+    const firstValidIndex = dailyHistory.findIndex(
+      (entry) => entry.equity > 0 && Number.isFinite(entry.equity)
+    );
+    const firstEntry =
+      firstValidIndex >= 0 ? dailyHistory[firstValidIndex] : dailyHistory[0];
+    const lastEntry = dailyHistory[dailyHistory.length - 1];
+    const absoluteReturn = lastEntry.equity - totalContributions;
+    const totalReturnPercent =
+      totalContributions > 0 ? (absoluteReturn / totalContributions) * 100 : 0;
+    const years = Math.max(
+      (new Date(lastEntry.date).getTime() -
+        new Date(firstEntry.date).getTime()) /
+        (1000 * 60 * 60 * 24 * 365.25),
+      1 / 365
+    );
+    const cagr =
+      firstEntry.equity > 0 && years > 0
+        ? Math.pow(lastEntry.equity / firstEntry.equity, 1 / years) - 1
+        : 0;
+
+    const dailyReturns: Array<{ ret: number; date: string }> = [];
+    let bestReturn = Number.NEGATIVE_INFINITY;
+    let bestDate = "";
+    let worstReturn = Number.POSITIVE_INFINITY;
+    let worstDate = "";
+    let equityPeak = firstEntry.equity;
+    let maxDrawdownEquity = 0;
+    let exposurePeak = firstEntry.exposure;
+    let maxDrawdownExposure = 0;
+    let underwaterDays = 0;
+    let cumulativeInvested = initialCapital; // Track cumulative invested capital
+
+    for (let i = 1; i < dailyHistory.length; i++) {
+      const point = dailyHistory[i];
+      const prev = dailyHistory[i - 1];
+      const contribution = contributionsByDate.get(point.date) || 0;
+      const equityChange = point.equity - prev.equity;
+      const ret =
+        prev.equity > 0 ? (equityChange - contribution) / prev.equity : 0;
+
+      if (ret > bestReturn) {
+        bestReturn = ret;
+        bestDate = point.date;
+      }
+      if (ret < worstReturn) {
+        worstReturn = ret;
+        worstDate = point.date;
+      }
+
+      dailyReturns.push({ ret, date: point.date });
+
+      // Update cumulative invested capital (initial + all contributions up to this point)
+      cumulativeInvested += contribution;
+
+      equityPeak = Math.max(equityPeak, point.equity);
+      const drawdown = point.equity / equityPeak - 1;
+      maxDrawdownEquity = Math.min(maxDrawdownEquity, drawdown);
+
+      // Underwater days: count days where equity is below cumulative invested capital
+      // This measures how many days the portfolio was below the total amount invested
+      if (point.equity < cumulativeInvested) {
+        underwaterDays += 1;
+      }
+
+      exposurePeak = Math.max(exposurePeak, point.exposure);
+      const exposureDrawdown = point.exposure / exposurePeak - 1;
+      maxDrawdownExposure = Math.min(maxDrawdownExposure, exposureDrawdown);
+    }
+
+    if (dailyReturns.length === 0) {
+      return {
+        capitalFinal: lastEntry.equity,
+        totalInvested: totalContributions,
+        absoluteReturn,
+        totalReturnPercent,
+        cagr,
+        volatility: 0,
+        sharpe: 0,
+        maxDrawdownEquity,
+        maxDrawdownExposure,
+        underwaterDays,
+        bestDay: null,
+        worstDay: null,
+      };
+    }
+
+    const meanReturn =
+      dailyReturns.reduce((sum, entry) => sum + entry.ret, 0) /
+      dailyReturns.length;
+    const variance =
+      dailyReturns.length > 1
+        ? dailyReturns.reduce(
+            (sum, entry) => sum + Math.pow(entry.ret - meanReturn, 2),
+            0
+          ) /
+          (dailyReturns.length - 1)
+        : 0;
+    const volatility = Math.sqrt(variance) * Math.sqrt(252);
+    const sharpe =
+      volatility > 0 ? (meanReturn * 252 - RISK_FREE_RATE) / volatility : 0;
+
+    return {
+      capitalFinal: lastEntry.equity,
+      totalInvested: totalContributions,
+      absoluteReturn,
+      totalReturnPercent,
+      cagr,
+      volatility,
+      sharpe,
+      maxDrawdownEquity,
+      maxDrawdownExposure,
+      underwaterDays,
+      bestDay:
+        bestDate && bestReturn !== Number.NEGATIVE_INFINITY
+          ? { date: bestDate, return: bestReturn }
+          : null,
+      worstDay:
+        worstDate && worstReturn !== Number.POSITIVE_INFINITY
+          ? { date: worstDate, return: worstReturn }
+          : null,
+    };
+  }
+
+  private async executeWithRetry<T>(
+    fn: () => Promise<T>,
+    retries = 3,
+    delayMs = 1000
+  ): Promise<T> {
+    let attempt = 0;
+    while (true) {
+      try {
+        return await fn();
+      } catch (error) {
+        attempt++;
+        if (attempt >= retries) {
+          throw error;
+        }
+        await new Promise((resolve) => setTimeout(resolve, delayMs));
+      }
+    }
+  }
+}

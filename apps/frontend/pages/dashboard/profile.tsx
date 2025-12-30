@@ -1,0 +1,502 @@
+import React, { useState, useEffect, FormEvent } from "react";
+import { useRouter } from "next/router";
+import Head from "next/head";
+import { useAuth } from "../../contexts/AuthContext";
+import { getProfile, updateProfile, UserProfile } from "../../lib/api";
+import DashboardSidebar from "../../components/DashboardSidebar";
+
+/**
+ * Profile page - User profile management
+ */
+export default function Profile() {
+  const router = useRouter();
+  const { user, loading } = useAuth();
+  const [portfolioId, setPortfolioId] = useState<string | null>(null);
+
+  const [profile, setProfile] = useState<UserProfile | null>(null);
+  const [isLoading, setIsLoading] = useState(true);
+  const [isSubmitting, setIsSubmitting] = useState(false);
+  const [message, setMessage] = useState("");
+  const [error, setError] = useState("");
+
+  const [formData, setFormData] = useState({
+    fullName: "",
+    notifyOnRecommendations: true,
+    notifyOnContributions: true,
+    notifyOnLeverageAlerts: true,
+    notifyOnRebalance: true,
+  });
+
+  // Redirect if not authenticated
+  useEffect(() => {
+    if (!loading && !user) {
+      router.push("/");
+    }
+  }, [user, loading, router]);
+
+  // Get portfolioId from URL
+  useEffect(() => {
+    const pId = router.query.portfolioId as string;
+    if (pId) {
+      setPortfolioId(pId);
+    }
+  }, [router.query.portfolioId]);
+
+  // Load profile data
+  useEffect(() => {
+    async function loadProfile() {
+      if (!user) return;
+
+      setIsLoading(true);
+      setError("");
+
+      try {
+        const profileData = await getProfile();
+        setProfile(profileData);
+        setFormData({
+          fullName: profileData.fullName || "",
+          notifyOnRecommendations: profileData.notifyOnRecommendations,
+          notifyOnContributions: profileData.notifyOnContributions,
+          notifyOnLeverageAlerts: profileData.notifyOnLeverageAlerts,
+          notifyOnRebalance: profileData.notifyOnRebalance,
+        });
+      } catch (err) {
+        console.error("Error loading profile:", err);
+        const errorMessage = err instanceof Error ? err.message : "Error al cargar el perfil";
+        if (errorMessage.includes("Invalid token") || errorMessage.includes("Unauthorized")) {
+          setError("Error de autenticación. Por favor, cierra sesión y vuelve a iniciar sesión.");
+        } else {
+          setError(errorMessage);
+        }
+      } finally {
+        setIsLoading(false);
+      }
+    }
+
+    if (user) {
+      loadProfile();
+    }
+  }, [user]);
+
+  const handleInputChange = (
+    field: keyof typeof formData,
+    value: string | boolean
+  ) => {
+    setFormData((prev) => ({ ...prev, [field]: value }));
+  };
+
+  const handleSubmit = async (e: FormEvent) => {
+    e.preventDefault();
+
+    setIsSubmitting(true);
+    setError("");
+    setMessage("");
+
+    try {
+      const updated = await updateProfile({
+        fullName: formData.fullName || undefined,
+        notifyOnRecommendations: formData.notifyOnRecommendations,
+        notifyOnContributions: formData.notifyOnContributions,
+        notifyOnLeverageAlerts: formData.notifyOnLeverageAlerts,
+        notifyOnRebalance: formData.notifyOnRebalance,
+      });
+
+      setProfile(updated);
+      setMessage("✅ Perfil actualizado correctamente");
+
+      setTimeout(() => {
+        setMessage("");
+      }, 3000);
+    } catch (err) {
+      setError(
+        err instanceof Error ? err.message : "Error al actualizar el perfil"
+      );
+    } finally {
+      setIsSubmitting(false);
+    }
+  };
+
+  if (loading || isLoading) {
+    return (
+      <>
+        <Head>
+          <title>Cargando...</title>
+        </Head>
+        <div
+          style={{
+            display: "flex",
+            justifyContent: "center",
+            alignItems: "center",
+            minHeight: "100vh",
+          }}
+        >
+          <p style={{ color: "#94a3b8", fontSize: "1rem" }}>Cargando...</p>
+        </div>
+      </>
+    );
+  }
+
+  if (!user) {
+    return null;
+  }
+
+  return (
+    <>
+      <Head>
+        <title>Mi Perfil - Leveraged DCA App</title>
+      </Head>
+      <DashboardSidebar portfolioId={portfolioId}>
+        <div style={{ padding: "2rem" }}>
+          <div style={{ maxWidth: "800px", margin: "0 auto" }}>
+            {/* Header */}
+            <div
+              style={{
+                marginBottom: "2rem",
+                paddingBottom: "1.5rem",
+                borderBottom: "1px solid #1e293b",
+              }}
+            >
+              <h1
+                style={{
+                  fontSize: "1.875rem",
+                  fontWeight: "700",
+                  color: "#f1f5f9",
+                  marginBottom: "0.25rem",
+                  letterSpacing: "-0.025em",
+                }}
+              >
+                Mi Perfil
+              </h1>
+              <p style={{ color: "#94a3b8", fontSize: "0.875rem" }}>
+                Gestiona tu información personal y preferencias de notificaciones
+              </p>
+            </div>
+
+          {/* Error Message */}
+          {error && (
+            <div
+              style={{
+                padding: "1rem",
+                background: "rgba(248, 113, 113, 0.1)",
+                border: "1px solid rgba(248, 113, 113, 0.3)",
+                borderRadius: "8px",
+                marginBottom: "1.5rem",
+              }}
+            >
+              <p style={{ color: "#f87171", margin: 0 }}>{error}</p>
+            </div>
+          )}
+
+          {/* Success Message */}
+          {message && (
+            <div
+              style={{
+                padding: "1rem",
+                background: "rgba(74, 222, 128, 0.1)",
+                border: "1px solid rgba(74, 222, 128, 0.3)",
+                borderRadius: "8px",
+                marginBottom: "1.5rem",
+              }}
+            >
+              <p style={{ color: "#4ade80", margin: 0 }}>{message}</p>
+            </div>
+          )}
+
+          {/* Profile Form */}
+          {profile && (
+            <form onSubmit={handleSubmit}>
+              {/* Personal Information */}
+              <div
+                style={{
+                  background: "#131b2e",
+                  border: "1px solid #1e293b",
+                  borderRadius: "8px",
+                  padding: "1.5rem",
+                  marginBottom: "1.5rem",
+                }}
+              >
+                <h2
+                  style={{
+                    fontSize: "1.125rem",
+                    fontWeight: "600",
+                    color: "#f1f5f9",
+                    marginBottom: "1rem",
+                  }}
+                >
+                  📝 Información Personal
+                </h2>
+
+                <div style={{ marginBottom: "1rem" }}>
+                  <label
+                    style={{
+                      display: "block",
+                      color: "#94a3b8",
+                      fontSize: "0.875rem",
+                      marginBottom: "0.5rem",
+                      fontWeight: "500",
+                    }}
+                  >
+                    Email
+                  </label>
+                  <input
+                    type="email"
+                    value={profile.email}
+                    disabled
+                    style={{
+                      width: "100%",
+                      padding: "0.75rem 1rem",
+                      background: "rgba(255, 255, 255, 0.05)",
+                      color: "rgba(255, 255, 255, 0.5)",
+                      border: "1px solid rgba(255, 255, 255, 0.1)",
+                      borderRadius: "6px",
+                      fontSize: "0.9375rem",
+                      cursor: "not-allowed",
+                    }}
+                  />
+                  <p
+                    style={{
+                      color: "#64748b",
+                      fontSize: "0.75rem",
+                      marginTop: "0.25rem",
+                      margin: 0,
+                    }}
+                  >
+                    El email no se puede modificar
+                  </p>
+                </div>
+
+                <div>
+                  <label
+                    style={{
+                      display: "block",
+                      color: "#cbd5e1",
+                      fontSize: "0.875rem",
+                      marginBottom: "0.5rem",
+                      fontWeight: "500",
+                    }}
+                  >
+                    Nombre Completo
+                  </label>
+                  <input
+                    type="text"
+                    value={formData.fullName}
+                    onChange={(e) => handleInputChange("fullName", e.target.value)}
+                    placeholder="Tu nombre completo (opcional)"
+                    disabled={isSubmitting}
+                    style={{
+                      width: "100%",
+                      padding: "0.75rem 1rem",
+                      background: "rgba(255, 255, 255, 0.1)",
+                      color: "white",
+                      border: "2px solid rgba(255, 255, 255, 0.2)",
+                      borderRadius: "6px",
+                      fontSize: "0.9375rem",
+                      boxSizing: "border-box",
+                    }}
+                  />
+                </div>
+              </div>
+
+              {/* Notification Preferences */}
+              <div
+                style={{
+                  background: "#131b2e",
+                  border: "1px solid #1e293b",
+                  borderRadius: "8px",
+                  padding: "1.5rem",
+                  marginBottom: "1.5rem",
+                }}
+              >
+                <h2
+                  style={{
+                    fontSize: "1.125rem",
+                    fontWeight: "600",
+                    color: "#f1f5f9",
+                    marginBottom: "1rem",
+                  }}
+                >
+                  🔔 Preferencias de Notificaciones
+                </h2>
+
+                <div style={{ display: "flex", flexDirection: "column", gap: "1rem" }}>
+                  <label
+                    style={{
+                      display: "flex",
+                      alignItems: "center",
+                      gap: "0.75rem",
+                      cursor: "pointer",
+                    }}
+                  >
+                    <input
+                      type="checkbox"
+                      checked={formData.notifyOnRecommendations}
+                      onChange={(e) =>
+                        handleInputChange("notifyOnRecommendations", e.target.checked)
+                      }
+                      disabled={isSubmitting}
+                      style={{
+                        width: "1.25rem",
+                        height: "1.25rem",
+                        cursor: isSubmitting ? "not-allowed" : "pointer",
+                      }}
+                    />
+                    <div>
+                      <div style={{ color: "#cbd5e1", fontWeight: "500" }}>
+                        Notificaciones de Recomendaciones
+                      </div>
+                      <div
+                        style={{
+                          color: "#64748b",
+                          fontSize: "0.8125rem",
+                          marginTop: "0.25rem",
+                        }}
+                      >
+                        Recibe notificaciones cuando haya nuevas recomendaciones para tu portfolio
+                      </div>
+                    </div>
+                  </label>
+
+                  <label
+                    style={{
+                      display: "flex",
+                      alignItems: "center",
+                      gap: "0.75rem",
+                      cursor: "pointer",
+                    }}
+                  >
+                    <input
+                      type="checkbox"
+                      checked={formData.notifyOnContributions}
+                      onChange={(e) =>
+                        handleInputChange("notifyOnContributions", e.target.checked)
+                      }
+                      disabled={isSubmitting}
+                      style={{
+                        width: "1.25rem",
+                        height: "1.25rem",
+                        cursor: isSubmitting ? "not-allowed" : "pointer",
+                      }}
+                    />
+                    <div>
+                      <div style={{ color: "#cbd5e1", fontWeight: "500" }}>
+                        Recordatorios de Aportaciones
+                      </div>
+                      <div
+                        style={{
+                          color: "#64748b",
+                          fontSize: "0.8125rem",
+                          marginTop: "0.25rem",
+                        }}
+                      >
+                        Recibe recordatorios cuando sea el día de realizar una aportación periódica
+                      </div>
+                    </div>
+                  </label>
+
+                  <label
+                    style={{
+                      display: "flex",
+                      alignItems: "center",
+                      gap: "0.75rem",
+                      cursor: "pointer",
+                    }}
+                  >
+                    <input
+                      type="checkbox"
+                      checked={formData.notifyOnLeverageAlerts}
+                      onChange={(e) =>
+                        handleInputChange("notifyOnLeverageAlerts", e.target.checked)
+                      }
+                      disabled={isSubmitting}
+                      style={{
+                        width: "1.25rem",
+                        height: "1.25rem",
+                        cursor: isSubmitting ? "not-allowed" : "pointer",
+                      }}
+                    />
+                    <div>
+                      <div style={{ color: "#cbd5e1", fontWeight: "500" }}>
+                        Alertas de Leverage
+                      </div>
+                      <div
+                        style={{
+                          color: "#64748b",
+                          fontSize: "0.8125rem",
+                          marginTop: "0.25rem",
+                        }}
+                      >
+                        Recibe alertas cuando el leverage efectivo esté fuera del rango configurado
+                      </div>
+                    </div>
+                  </label>
+
+                  <label
+                    style={{
+                      display: "flex",
+                      alignItems: "center",
+                      gap: "0.75rem",
+                      cursor: "pointer",
+                    }}
+                  >
+                    <input
+                      type="checkbox"
+                      checked={formData.notifyOnRebalance}
+                      onChange={(e) =>
+                        handleInputChange("notifyOnRebalance", e.target.checked)
+                      }
+                      disabled={isSubmitting}
+                      style={{
+                        width: "1.25rem",
+                        height: "1.25rem",
+                        cursor: isSubmitting ? "not-allowed" : "pointer",
+                      }}
+                    />
+                    <div>
+                      <div style={{ color: "#cbd5e1", fontWeight: "500" }}>
+                        Notificaciones de Rebalance
+                      </div>
+                      <div
+                        style={{
+                          color: "#64748b",
+                          fontSize: "0.8125rem",
+                          marginTop: "0.25rem",
+                        }}
+                      >
+                        Recibe notificaciones cuando se recomiende realizar un rebalance del portfolio
+                      </div>
+                    </div>
+                  </label>
+                </div>
+              </div>
+
+              {/* Submit Button */}
+              <div style={{ display: "flex", justifyContent: "flex-end" }}>
+                <button
+                  type="submit"
+                  disabled={isSubmitting}
+                  style={{
+                    padding: "0.75rem 2rem",
+                    background: isSubmitting
+                      ? "rgba(255, 255, 255, 0.1)"
+                      : "linear-gradient(135deg, #10b981 0%, #059669 100%)",
+                    color: "white",
+                    border: "none",
+                    borderRadius: "6px",
+                    fontSize: "0.9375rem",
+                    fontWeight: "600",
+                    cursor: isSubmitting ? "not-allowed" : "pointer",
+                    opacity: isSubmitting ? 0.7 : 1,
+                  }}
+                >
+                  {isSubmitting ? "Guardando..." : "Guardar Cambios"}
+                </button>
+              </div>
+            </form>
+          )}
+          </div>
+        </div>
+      </DashboardSidebar>
+    </>
+  );
+}
+
