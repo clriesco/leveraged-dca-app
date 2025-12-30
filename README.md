@@ -1,156 +1,390 @@
 # Leveraged DCA App
 
-Monorepo hosting the NestJS backend, Next.js frontend, shared libraries, and job scripts for the Leveraged DCA product.
+A complete web application for managing leveraged investment portfolios that implements a **Conditional DCA and Dynamic Leverage Management** strategy. The application allows users to manage leveraged portfolios with automated rebalancing strategies based on market signals, Sharpe Ratio optimization, and active risk management.
 
-## 🎯 Current status — Iteration 2 Strategy Implementation
+## 🎯 Project Overview
 
-- ✅ Passwordless authentication backed by Supabase
-- ✅ Prisma database schema covering users, portfolios, assets, prices, and metrics
-- ✅ NestJS backend with auth endpoints (`/api/auth/login`, `/api/auth/me`)
-- ✅ Next.js frontend with login flow and dashboard
-- ✅ Scheduled job templates for price ingestion and metrics refresh
-- ✅ **Portfolio Configuration Panel** - Customize strategy parameters
-- ✅ **Recommendations Engine** - Actionable alerts based on leverage status
-- ✅ **Daily Check Job** - Automated portfolio verification with alerts
+**Leveraged DCA App** implements an investment strategy where:
+1. Users make periodic contributions (DCA - Dollar Cost Averaging)
+2. The system automatically manages leverage between 2.5x and 4.0x
+3. Asset weights are optimized using Sharpe Ratio algorithms
+4. Contributions are deployed conditionally based on market signals (drawdown, weight deviation, volatility)
+5. Clear recommendations and specific actions are provided to keep the portfolio within configured risk parameters
 
-## Structure
+The strategy is based on quantitative analysis from the `montecarlo-quantfury` project, using Monte Carlo simulation and historical backtesting to optimize leveraged portfolios.
 
-- `apps/backend`: NestJS API handling authentication, portfolios, rebalances, and metrics.
-- `apps/frontend`: Next.js dashboard with Supabase-powered passwordless login and visualizations.
-- `packages/shared`: Shared typings, constants, and helpers for financial logic.
-- `infra/scripts`: Scheduled jobs (`price-ingestion.ts`, `metrics-refresh.ts`) ready for cron deployment.
+## 🏗️ Architecture
 
-## Commands
+### Monorepo Structure
 
-Install dependencies for the entire workspace:
+```
+leveraged-dca-app/
+├── apps/
+│   ├── backend/          # NestJS API (Port 3003)
+│   └── frontend/         # Next.js Dashboard (Port 3002)
+├── packages/
+│   └── shared/           # Shared types and utilities
+└── infra/
+    └── scripts/          # Scheduled jobs (cron)
+```
+
+### Technology Stack
+
+**Backend:**
+- NestJS 10.2.0
+- Prisma ORM (PostgreSQL)
+- Supabase (Auth + Database)
+- TypeScript
+
+**Frontend:**
+- Next.js 14
+- React 19
+- TypeScript
+- Supabase Client
+
+**Infrastructure:**
+- Supabase (PostgreSQL + Auth)
+- Render/Railway (Backend hosting)
+- Vercel (Frontend hosting)
+
+## 🚀 Quick Start
+
+### Prerequisites
+
+- Node.js 18+
+- npm or yarn
+- PostgreSQL database (Supabase)
+
+### Installation
 
 ```bash
+# Install dependencies
 npm install
+
+# Sync database schema
+cd apps/backend
+npm run prisma:push
+npm run prisma:generate
 ```
 
-Run only backend or frontend:
+### Environment Variables
 
+**Backend** (`apps/backend/.env`):
 ```bash
-npm run dev:backend
-npm run dev:frontend
+DATABASE_URL=postgresql://postgres:[PASSWORD]@db.uuxvjxdayeovhbduxmbu.supabase.co:5432/postgres
+DIRECT_URL=postgresql://postgres:[PASSWORD]@db.uuxvjxdayeovhbduxmbu.supabase.co:5432/postgres
+SUPABASE_URL=https://uuxvjxdayeovhbduxmbu.supabase.co
+SUPABASE_ANON_KEY=<anon-key>
+SUPABASE_SERVICE_ROLE_KEY=<service-role-key>
+FRONTEND_URL=http://localhost:3002
+PORT=3003
 ```
 
-Run both in parallel (`concurrently` is required):
+**Frontend** (`apps/frontend/.env.local`):
+```bash
+NEXT_PUBLIC_SUPABASE_URL=https://uuxvjxdayeovhbduxmbu.supabase.co
+NEXT_PUBLIC_SUPABASE_ANON_KEY=<anon-key>
+NEXT_PUBLIC_API_URL=http://localhost:3003/api
+```
+
+### Development
 
 ```bash
+# Run both backend and frontend
 npm run dev
+
+# Or run separately
+npm run dev:backend   # Backend on http://localhost:3003
+npm run dev:frontend  # Frontend on http://localhost:3002
 ```
 
-Lint, test, and build all workspaces:
+## 📋 Features
 
+### ✅ Implemented
+
+- **Passwordless Authentication** - Magic link login via Supabase
+- **Portfolio Management** - Create and manage leveraged portfolios
+- **Monthly Contributions** - Register DCA contributions with deployment tracking
+- **Manual Position Updates** - Update positions from broker data
+- **Automated Rebalancing** - Sophisticated rebalancing algorithm with:
+  - Sharpe Ratio optimization (Nelder-Mead)
+  - Deploy signal evaluation (drawdown, weight deviation, volatility)
+  - Gradual deployment (configurable factor)
+- **Portfolio Configuration** - Customize strategy parameters:
+  - Leverage range (min, max, target)
+  - Target asset weights
+  - Deploy signal thresholds
+  - Sharpe optimization parameters
+- **Recommendations Engine** - Actionable recommendations:
+  - Leverage status alerts (low/high)
+  - Specific purchase recommendations
+  - Extra contribution calculations
+  - Contribution day reminders
+- **Analytics Dashboard** - Comprehensive metrics:
+  - Equity, Exposure, Leverage tracking
+  - CAGR, Sharpe Ratio, Volatility
+  - Maximum Drawdown (Equity & Exposure)
+  - Underwater Days calculation
+  - Best/Worst day tracking
+- **User Profile** - Personal information and notification preferences
+- **Historical Data** - Monthly metrics history with pagination
+- **Interactive Charts** - SVG-based equity history visualization
+
+### 🚧 In Progress / Planned
+
+- Email/SMS notifications for urgent alerts
+- Broker API integration (webhooks)
+- Recommendation history tracking
+- Multiple portfolios per user
+- Data export (CSV/Excel)
+- "What if" simulator before rebalancing
+
+## 📡 API Endpoints
+
+Base URL: `http://localhost:3003/api`
+
+### Authentication
+- `POST /auth/login` - Send magic link
+- `GET /auth/me` - Get current user
+
+### Users
+- `GET /users/profile` - Get user profile
+- `PUT /users/profile` - Update user profile
+
+### Portfolios
+- `GET /portfolios?email=...` - List user portfolios
+- `GET /portfolios/:id` - Get portfolio details
+- `GET /portfolios/:id/summary` - Get portfolio summary with analytics
+- `GET /portfolios/:id/metrics` - Get monthly metrics history
+- `GET /portfolios/:id/daily-metrics` - Get daily metrics
+
+### Configuration
+- `GET /portfolios/:portfolioId/configuration` - Get portfolio configuration
+- `PUT /portfolios/:portfolioId/configuration` - Update configuration
+- `GET /portfolios/:portfolioId/configuration/target-weights` - Get target weights
+- `GET /portfolios/:portfolioId/configuration/is-contribution-day` - Check if today is contribution day
+
+### Recommendations
+- `GET /portfolios/:portfolioId/recommendations` - Get current recommendations
+
+### Contributions
+- `POST /contributions` - Register monthly contribution
+
+### Positions
+- `POST /positions` - Update portfolio positions (upsert)
+- `GET /positions/search-symbols?q=...` - Search asset symbols
+
+### Rebalancing
+- `GET /portfolios/:portfolioId/rebalance/proposal` - Get rebalancing proposal
+- `POST /portfolios/:portfolioId/rebalance/accept` - Accept and save rebalancing
+
+For complete API documentation, see `README_LLM.md` (section "API Endpoints").
+
+## 🛠️ Infrastructure Scripts
+
+### Price Ingestion
 ```bash
-npm run lint
-npm run test
-npm run build
+cd infra/scripts
+npm run price:ingest
 ```
+Fetches daily asset prices from Yahoo Finance and stores in `asset_prices` table.
 
-## Setup
+**Cron:** Daily (e.g., 6 AM UTC)
 
-1. **Environment variables**
+### Metrics Refresh
+```bash
+cd infra/scripts
+npm run metrics:refresh
+```
+Recalculates daily metrics for all portfolios and writes to `metrics_timeseries` and `daily_metrics`.
 
-   - Backend (`apps/backend/.env`):
+**Cron:** Daily (e.g., 7 AM UTC, after price-ingestion)
 
-     ```bash
-     DATABASE_URL=postgresql://postgres:[PASSWORD]@db.uuxvjxdayeovhbduxmbu.supabase.co:5432/postgres
-     SUPABASE_URL=https://uuxvjxdayeovhbduxmbu.supabase.co
-     SUPABASE_SERVICE_ROLE_KEY=<service-role-key>
-     SUPABASE_ANON_KEY=<anon-key>
-     FRONTEND_URL=http://localhost:3002
-     PORT=3003
-     ```
-
-   - Frontend (`apps/frontend/.env.local`):
-
-     ```bash
-     NEXT_PUBLIC_SUPABASE_URL=https://uuxvjxdayeovhbduxmbu.supabase.co
-     NEXT_PUBLIC_SUPABASE_ANON_KEY=<anon-key>
-     NEXT_PUBLIC_API_URL=http://localhost:3003/api
-     ```
-
-2. **Sync Prisma schema / inspect database**
-
-   ```bash
-   cd apps/backend
-   npm run prisma:push
-   npm run prisma:studio
-   ```
-
-3. **Start local development**
-
-   ```bash
-   npm run dev
-   ```
-
-## Platform integration
-
-- **Render**: Hosts backend and cron jobs (Docker services).
-- **Vercel**: Deploys the Next.js frontend (connect `github.com/clriesco/leveraged-dca-app`).
-- **Supabase**: Primary Postgres database and auth provider (`db.uuxvjxdayeovhbduxmbu.supabase.co`).
-
-## Cron jobs
-
-- `infra/scripts/price-ingestion.ts`: Fetches daily asset prices from Yahoo Finance and upserts into `asset_prices`.
-- `infra/scripts/metrics-refresh.ts`: Recalculates metrics per portfolio and writes to `metrics_timeseries`.
-- `infra/scripts/daily-check.ts`: **NEW** - Daily portfolio verification:
-  - Checks leverage status (low/in_range/high)
-  - Detects contribution days
-  - Generates alerts for action required
-  - Stores daily metrics with margin ratio
-  - Placeholder for email notifications
-
-Run manually:
+### Daily Check
 ```bash
 cd infra/scripts
 npm run daily:check
 ```
+Daily portfolio verification:
+- Calculates current state (equity, exposure, leverage)
+- Evaluates deploy signals
+- Detects leverage out of range
+- Generates recommendations
+- Stores daily metrics
 
-Schedule via Supabase cron, Render & Railway schedulers, or cloud cron/Edge Function.
+**Cron:** Daily (e.g., 9 AM UTC, after metrics-refresh)
 
-## New Features (Iteration 2)
+## 🗄️ Database Schema
 
-### Configuration Panel (`/dashboard/configuration`)
-- Monthly contribution settings (amount, day, enabled)
-- Leverage range (min, max, target)
-- Deploy signal thresholds (drawdown, weight deviation, volatility)
-- Sharpe optimization parameters
-- Target weights per asset (with visual editor)
-- Margin safety levels
+The database schema is defined in `apps/backend/prisma/schema.prisma`. Main models:
 
-### Recommendations Panel (`/dashboard/recommendations`)
-- **Case 1 (In Range)**: Portfolio healthy, no action needed
-- **Case 2 (Leverage Low)**: Specific purchase recommendations for reborrow
-- **Case 3 (Leverage High)**: Exact extra contribution amount to reduce risk
-- Deploy signals visualization (drawdown, weight deviation, volatility)
-- Contribution day reminders
+- **User** - User accounts with notification preferences
+- **Portfolio** - Portfolio configuration and strategy parameters
+- **Asset** - Financial assets (crypto, commodities, indices, etc.)
+- **PortfolioPosition** - Current holdings
+- **MonthlyContribution** - DCA contributions with deployment tracking
+- **RebalanceEvent** - Rebalancing history
+- **RebalancePosition** - Target positions for rebalancing
+- **AssetPrice** - Historical daily prices
+- **MetricsTimeseries** - Monthly portfolio metrics
+- **DailyMetric** - Daily portfolio metrics
 
-### API Endpoints
-- `GET/PUT /api/portfolios/:id/configuration` - Portfolio settings
-- `GET /api/portfolios/:id/recommendations` - Actionable recommendations
+See `README_LLM.md` (section "Data Model") for complete schema documentation.
 
-See `ENDPOINTS.md` for full API documentation.
+## 🧮 Core Algorithms
 
-## Next steps (Iteration 3)
+### Rebalancing Algorithm
 
-- [ ] Email notifications for urgent alerts
-- [ ] Webhook integration for Quantfury/broker APIs
-- [ ] Historical recommendations tracking
-- [ ] Performance analytics dashboard
-- [ ] Mobile-responsive improvements
+The rebalancing algorithm replicates the logic from `BacktestHistorical.ipynb`:
 
-## Testing
+1. **Deploy Signal Evaluation:**
+   - Drawdown > 12% → Full deploy
+   - Weight deviation > 5% → Full deploy
+   - Volatility < 18% → Full deploy
+   - Gradual deploy factor (default: 0.5)
 
-- Frontend: http://localhost:3002 (login flow)
-- Backend health check: http://localhost:3003/api
-- Auth login: `POST http://localhost:3003/api/auth/login` with `{ "email": "you@example.com" }`
+2. **Weight Optimization:**
+   - Static weights for first 3 months
+   - Dynamic Sharpe optimization after 3 months (Nelder-Mead)
+   - 60% shrinkage to mean returns (conservatism)
+   - Constraints: min 5%, max 40% per asset
 
-## Technical documentation
+3. **Target Exposure Calculation:**
+   - Based on target leverage and available equity
+   - Clamped between min/max leverage bounds
 
-- Prisma schema: `apps/backend/prisma/schema.prisma`
-- Auth flow: Supabase passwordless → magic link → redirect to `/dashboard`
-- Scheduled jobs: `infra/scripts/README.md`
+### Recommendations System
 
+Generates actionable recommendations based on:
+- **Leverage status:** Low (needs reborrow), High (needs extra contribution), In Range
+- **Deploy signals:** Drawdown, weight deviation, volatility
+- **Contribution days:** Reminders for scheduled contributions
+
+## 🎨 Frontend Pages
+
+- `/` - Login page (passwordless)
+- `/dashboard` - Main dashboard with metrics, charts, and recommendations
+- `/dashboard/contribution` - Register monthly contribution
+- `/dashboard/manual-update` - Update positions manually
+- `/dashboard/rebalance` - View and accept rebalancing proposals
+- `/dashboard/configuration` - Configure portfolio strategy
+- `/dashboard/profile` - User profile and preferences
+
+## 🔐 Authentication
+
+The app uses Supabase passwordless authentication:
+1. User enters email
+2. Receives magic link via email
+3. Clicks link → redirects to dashboard
+4. Token stored in `localStorage` as `supabase_token`
+
+Backend verifies tokens by decoding JWT directly (no HTTP calls to Supabase) and searches for users by email in the local database.
+
+## 📊 Key Metrics
+
+The system calculates comprehensive portfolio analytics:
+
+- **Equity** - Current capital (exposure - borrowed)
+- **Exposure** - Total position value
+- **Leverage** - Effective leverage (exposure / equity)
+- **CAGR** - Compound annual growth rate
+- **Sharpe Ratio** - Risk-adjusted return
+- **Volatility** - Annualized standard deviation
+- **Maximum Drawdown** - Largest drop from peak (Equity & Exposure)
+- **Underwater Days** - Days where equity < total invested
+- **Best/Worst Day** - Days with highest gain/loss
+
+## 🐛 Known Issues
+
+1. **Equity calculation:** Currently approximated as `exposure / leverage`, should be `exposure - borrowedAmount`
+2. **Price fetching:** Manual update doesn't automatically fetch prices when `avgPrice` is 0
+3. **Auth middleware:** Not all endpoints validate portfolio ownership
+4. **Daily metrics:** `metrics-refresh.ts` should also write to `daily_metrics` table
+
+## 📚 Documentation
+
+- **`README_LLM.md`** - Comprehensive documentation for LLMs (complete project context)
+- **`apps/backend/prisma/schema.prisma`** - Database schema
+- **`apps/backend/src/`** - Backend source code
+- **`apps/frontend/pages/`** - Frontend pages
+
+## 🚀 Deployment
+
+### Backend
+- **Platform:** Render/Railway (Docker)
+- **Database:** Supabase PostgreSQL
+- **Cron Jobs:** Configure via platform schedulers or Supabase cron
+
+### Frontend
+- **Platform:** Vercel
+- **Repository:** `github.com/clriesco/leveraged-dca-app`
+- **Build:** Automatic on push to main branch
+
+## 🧪 Testing
+
+```bash
+# Frontend
+http://localhost:3002
+
+# Backend health check
+http://localhost:3003/api
+
+# Test login
+POST http://localhost:3003/api/auth/login
+Body: { "email": "you@example.com" }
+```
+
+## 📝 Development Commands
+
+```bash
+# Install dependencies
+npm install
+
+# Development
+npm run dev              # Both backend and frontend
+npm run dev:backend      # Backend only
+npm run dev:frontend      # Frontend only
+
+# Database
+cd apps/backend
+npm run prisma:push      # Sync schema
+npm run prisma:generate  # Generate Prisma Client
+npm run prisma:studio    # Open Prisma Studio
+
+# Build
+npm run build            # Build all
+cd apps/backend && npm run build
+cd apps/frontend && npm run build
+
+# Lint
+npm run lint
+```
+
+## 🔮 Roadmap
+
+### High Priority
+- [ ] Configure cron jobs in production
+- [ ] Implement real equity calculation (track `borrowedAmount`)
+- [ ] Add auth middleware to all endpoints
+- [ ] Auto-fetch prices in position updates
+
+### Medium Priority
+- [ ] Improve pending contributions tracking
+- [ ] Add basic tests
+- [ ] Implement email/SMS notifications
+- [ ] Recommendation history
+
+### Low Priority
+- [ ] Multiple portfolios per user
+- [ ] Broker API integration
+- [ ] Data export (CSV/Excel)
+- [ ] "What if" simulator
+
+## 📄 License
+
+Private project - All rights reserved
+
+---
+
+**Last updated:** December 2024  
+**Status:** Functional MVP with core features implemented
