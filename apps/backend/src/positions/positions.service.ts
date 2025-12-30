@@ -1,7 +1,9 @@
 import { Injectable, NotFoundException } from '@nestjs/common';
-import { PrismaService } from '../prisma/prisma.service';
-import { UpsertPositionsDto } from './dto/upsert-positions.dto';
+
 import { PortfolioConfigurationService } from '../portfolios/portfolio-configuration.service';
+import { PrismaService } from '../prisma/prisma.service';
+
+import { UpsertPositionsDto } from './dto/upsert-positions.dto';
 
 @Injectable()
 export class PositionsService {
@@ -85,7 +87,20 @@ export class PositionsService {
         console.log(`[PositionsService] ✅ New asset ${item.symbol} with quantity 0 - will be added for weight configuration`);
       }
 
-      const exposure = item.quantity * item.avgPrice;
+      // Auto-fetch price if avgPrice is 0 or not provided
+      let finalAvgPrice = item.avgPrice;
+      if ((finalAvgPrice === 0 || !finalAvgPrice) && item.quantity > 0) {
+        console.log(`[PositionsService] Auto-fetching price for ${item.symbol} (avgPrice is 0)`);
+        const fetchedPrice = await this.fetchCurrentPrice(item.symbol);
+        if (fetchedPrice) {
+          finalAvgPrice = fetchedPrice;
+          console.log(`[PositionsService] ✅ Fetched price for ${item.symbol}: $${finalAvgPrice}`);
+        } else {
+          console.warn(`[PositionsService] ⚠️ Could not fetch price for ${item.symbol}, using 0`);
+        }
+      }
+
+      const exposure = item.quantity * finalAvgPrice;
 
       const asset = await this.prisma.asset.upsert({
         where: { symbol: item.symbol },
@@ -152,14 +167,14 @@ export class PositionsService {
         },
         update: {
           quantity: item.quantity,
-          avgPrice: item.avgPrice,
+          avgPrice: finalAvgPrice,
           exposureUsd: exposure,
         },
         create: {
           portfolioId: dto.portfolioId,
           assetId: asset.id,
           quantity: item.quantity,
-          avgPrice: item.avgPrice,
+          avgPrice: finalAvgPrice,
           exposureUsd: exposure,
         },
       });
@@ -218,6 +233,9 @@ export class PositionsService {
         exposure += position.quantity * price;
       }
 
+      // Calculate borrowed amount: exposure - equity
+      const borrowedAmount = exposure - dto.equity;
+      
       // Calculate leverage and margin ratio
       const leverage = dto.equity > 0 ? exposure / dto.equity : 0;
       const marginRatio = exposure > 0 ? dto.equity / exposure : 1;
@@ -283,6 +301,7 @@ export class PositionsService {
             peakEquity,
             marginRatio,
             drawdown,
+            borrowedAmount,
           },
           update: {
             equity: dto.equity,
@@ -291,6 +310,7 @@ export class PositionsService {
             peakEquity,
             marginRatio,
             drawdown,
+            borrowedAmount,
           },
         });
       }
@@ -332,6 +352,7 @@ export class PositionsService {
             leverage,
             drawdown,
             marginRatio,
+            borrowedAmount,
             metadataJson: JSON.stringify({
               source: 'manual_update',
               updatedAt: new Date().toISOString(),
@@ -344,6 +365,7 @@ export class PositionsService {
           data: {
             portfolioId: dto.portfolioId,
             date: today, // UTC date at midnight
+            borrowedAmount,
             equity: dto.equity,
             exposure,
             leverage,
@@ -416,6 +438,40 @@ export class PositionsService {
         console.error(`[PositionsService] Error details: ${error.message}`);
       }
       return false;
+    }
+  }
+
+  /**
+   * Fetch current price from Yahoo Finance
+   * @param symbol - Asset symbol
+   * @returns Current price or null if not found
+   */
+  private async fetchCurrentPrice(symbol: string): Promise<number | null> {
+    try {
+      const url = `https://query1.finance.yahoo.com/v8/finance/chart/${symbol}?interval=1d&range=1d`;
+      const response = await fetch(url, {
+        headers: {
+          "User-Agent":
+            "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36",
+        },
+      });
+
+      if (!response.ok) {
+        console.error(`[PositionsService] Failed to fetch price for ${symbol}: HTTP ${response.status}`);
+        return null;
+      }
+
+      const data = await response.json();
+      const price = data.chart?.result?.[0]?.meta?.regularMarketPrice;
+
+      if (price && price > 0) {
+        return price;
+      }
+
+      return null;
+    } catch (error) {
+      console.error(`[PositionsService] Error fetching current price for ${symbol}:`, error);
+      return null;
     }
   }
 

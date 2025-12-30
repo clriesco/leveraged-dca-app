@@ -1256,6 +1256,9 @@ function Dashboard() {
  * Simple equity chart using SVG
  */
 function EquityChart({ data }: { data: MetricsPoint[] }) {
+  const [hoverIndex, setHoverIndex] = useState<number | null>(null);
+  const [containerRef, setContainerRef] = useState<HTMLDivElement | null>(null);
+
   if (data.length === 0) return null;
 
   const width = 1200; // Increased from 900 to use more horizontal space
@@ -1282,8 +1285,6 @@ function EquityChart({ data }: { data: MetricsPoint[] }) {
   const polylinePoints = coords
     .map((coord) => `${coord.x},${coord.y}`)
     .join(" ");
-  const [hoverIndex, setHoverIndex] = useState<number | null>(null);
-  const [containerRef, setContainerRef] = useState<HTMLDivElement | null>(null);
 
   const handleMouseMove = (event: React.MouseEvent<SVGSVGElement>) => {
     // Get the SVG element's bounding box (already scaled by viewBox)

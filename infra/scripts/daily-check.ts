@@ -33,6 +33,7 @@ interface PortfolioState {
   isContributionDay: boolean;
   pendingContributions: number;
   alerts: Alert[];
+  borrowedAmount: number | null;
 }
 
 interface Alert {
@@ -102,7 +103,9 @@ async function calculatePortfolioState(
   }
 
   // Get equity from latest metrics or calculate estimate
+  // Prefer using borrowedAmount when available for accurate calculation
   let equity = portfolio.initialCapital;
+  let borrowedAmount: number | null = null;
 
   const latestMetric = await prisma.metricsTimeseries.findFirst({
     where: { portfolioId: portfolio.id },
@@ -111,12 +114,20 @@ async function calculatePortfolioState(
 
   if (latestMetric) {
     equity = latestMetric.equity;
+    borrowedAmount = latestMetric.borrowedAmount;
+    
+    // If we have borrowedAmount, recalculate equity from exposure
+    // This ensures accuracy: equity = exposure - borrowedAmount
+    if (borrowedAmount !== null) {
+      equity = exposure - borrowedAmount;
+    }
   } else {
     // Estimate: use target leverage to back-calculate
     const targetLeverage =
       portfolio.leverageTarget ||
       (portfolio.leverageMin + portfolio.leverageMax) / 2;
     equity = exposure / targetLeverage;
+    borrowedAmount = exposure - equity;
   }
 
   // Calculate leverage and margin
@@ -182,6 +193,7 @@ async function calculatePortfolioState(
     isContributionDay,
     pendingContributions: pendingContributions._sum.amount || 0,
     alerts,
+    borrowedAmount,
   };
 }
 
@@ -307,6 +319,7 @@ async function storeDailyMetric(state: PortfolioState): Promise<void> {
       leverage: state.leverage,
       peakEquity,
       marginRatio: state.marginRatio,
+      borrowedAmount: state.borrowedAmount,
     },
     update: {
       equity: state.equity,
@@ -314,6 +327,7 @@ async function storeDailyMetric(state: PortfolioState): Promise<void> {
       leverage: state.leverage,
       peakEquity,
       marginRatio: state.marginRatio,
+      borrowedAmount: state.borrowedAmount,
     },
   });
 }

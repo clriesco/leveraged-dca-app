@@ -1,8 +1,12 @@
-import { Body, Controller, Get, HttpCode, Post, Query } from '@nestjs/common';
-import { PositionsService } from './positions.service';
+import { Body, Controller, Get, HttpCode, Post, Query, UseGuards } from '@nestjs/common';
+
+import { AuthGuard } from '../auth/auth.guard';
+
 import { UpsertPositionsDto } from './dto/upsert-positions.dto';
+import { PositionsService } from './positions.service';
 
 @Controller('positions')
+@UseGuards(AuthGuard)
 export class PositionsController {
   constructor(private readonly positionsService: PositionsService) {}
 

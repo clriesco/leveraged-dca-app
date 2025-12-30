@@ -1,8 +1,12 @@
-import { Body, Controller, HttpCode, Post } from '@nestjs/common';
+import { Body, Controller, HttpCode, Post, UseGuards } from '@nestjs/common';
+
+import { AuthGuard } from '../auth/auth.guard';
+
 import { ContributionsService } from './contributions.service';
 import { CreateContributionDto } from './dto/create-contribution.dto';
 
 @Controller('contributions')
+@UseGuards(AuthGuard)
 export class ContributionsController {
   constructor(private readonly contributionsService: ContributionsService) {}
 

@@ -1,7 +1,12 @@
-import { Controller, Get, Param, Query } from "@nestjs/common";
+import { Controller, Get, Param, Query, UseGuards } from "@nestjs/common";
+
+import { AuthGuard } from "../auth/auth.guard";
+import { CurrentUser } from "../auth/current-user.decorator";
+
 import { PortfoliosService } from "./portfolios.service";
 
 @Controller("portfolios")
+@UseGuards(AuthGuard)
 export class PortfoliosController {
   constructor(private readonly portfoliosService: PortfoliosService) {}
 
@@ -10,8 +15,15 @@ export class PortfoliosController {
    * GET /api/portfolios?email=user@example.com
    */
   @Get()
-  async findByUser(@Query("email") email: string) {
-    return this.portfoliosService.findByUserEmail(email);
+  async findByUser(
+    @Query("email") email: string,
+    @CurrentUser() user: any
+  ) {
+    // Ensure user can only access their own portfolios
+    if (email && email !== user.email) {
+      throw new Error("Unauthorized: Cannot access other user's portfolios");
+    }
+    return this.portfoliosService.findByUserEmail(user.email);
   }
 
   /**

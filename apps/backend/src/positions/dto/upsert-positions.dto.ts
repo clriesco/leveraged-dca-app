@@ -1,5 +1,6 @@
 import { Type } from 'class-transformer';
 import { IsArray, IsNotEmpty, IsString, IsUUID, ValidateNested, IsNumber, IsOptional, Min } from 'class-validator';
+
 import { PositionItemDto } from './position-item.dto';
 
 export class UpsertPositionsDto {

@@ -3,8 +3,6 @@
   "/_error": "pages/_error.js",
   "/_document": "pages/_document.js",
   "/dashboard/profile": "pages/dashboard/profile.js",
-  "/dashboard/manual-update": "pages/dashboard/manual-update.js",
-  "/dashboard/configuration": "pages/dashboard/configuration.js",
   "/dashboard": "pages/dashboard.js",
-  "/dashboard/rebalance": "pages/dashboard/rebalance.js"
+  "/dashboard/manual-update": "pages/dashboard/manual-update.js"
 }

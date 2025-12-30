@@ -1,6 +1,7 @@
 import { Injectable, NotFoundException } from "@nestjs/common";
+
 import { PrismaService } from "../prisma/prisma.service";
-import { PortfolioConfigurationService } from "./portfolio-configuration.service";
+
 import {
   PortfolioRecommendationsResponse,
   PortfolioCurrentState,
@@ -10,6 +11,7 @@ import {
   ExtraContributionRecommendation,
   RecommendationPriority,
 } from "./dto/portfolio-recommendations.dto";
+import { PortfolioConfigurationService } from "./portfolio-configuration.service";
 
 /**
  * Asset unit mapping based on asset type

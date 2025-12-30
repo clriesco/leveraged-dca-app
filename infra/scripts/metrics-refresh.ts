@@ -49,21 +49,42 @@ async function calculateMetrics(portfolioId: string, date: Date) {
     totalExposure += pos.quantity * currentPrice;
   }
 
-  // For now, assume equity is exposure divided by leverage
-  // In a real scenario, we'd track borrowed amount separately
-  const portfolio = await prisma.portfolio.findUnique({
-    where: { id: portfolioId },
+  // Get latest metrics to calculate borrowedAmount
+  const latestMetric = await prisma.metricsTimeseries.findFirst({
+    where: { portfolioId },
+    orderBy: { date: "desc" },
   });
 
-  if (!portfolio) return null;
+  // Calculate borrowedAmount: exposure - equity
+  // If we have previous metrics, use the borrowedAmount from there
+  // Otherwise, calculate equity from leverage and derive borrowedAmount
+  let equity: number;
+  let borrowedAmount: number | null = null;
 
-  const targetLeverage = (portfolio.leverageMin + portfolio.leverageMax) / 2;
-  const equity = totalExposure / targetLeverage;
+  if (latestMetric && latestMetric.borrowedAmount !== null) {
+    // Use previous borrowedAmount as reference, calculate equity
+    // If exposure changed, adjust borrowedAmount proportionally
+    const exposureChange = totalExposure - latestMetric.exposure;
+    borrowedAmount = latestMetric.borrowedAmount + exposureChange;
+    equity = totalExposure - borrowedAmount;
+  } else {
+    // Fallback: estimate equity from leverage
+    const portfolio = await prisma.portfolio.findUnique({
+      where: { id: portfolioId },
+    });
+
+    if (!portfolio) return null;
+
+    const targetLeverage = (portfolio.leverageMin + portfolio.leverageMax) / 2;
+    equity = totalExposure / targetLeverage;
+    borrowedAmount = totalExposure - equity;
+  }
 
   return {
     equity,
     exposure: totalExposure,
-    leverage: totalExposure / equity,
+    leverage: equity > 0 ? totalExposure / equity : 0,
+    borrowedAmount,
     sharpe: null, // Calculate later with returns history
     drawdown: null, // Calculate later with equity history
   };
@@ -105,10 +126,20 @@ async function refreshMetrics() {
           create: {
             portfolioId: portfolio.id,
             date: today,
-            ...metrics,
+            equity: metrics.equity,
+            exposure: metrics.exposure,
+            leverage: metrics.leverage,
+            borrowedAmount: metrics.borrowedAmount,
+            sharpe: metrics.sharpe,
+            drawdown: metrics.drawdown,
           },
           update: {
-            ...metrics,
+            equity: metrics.equity,
+            exposure: metrics.exposure,
+            leverage: metrics.leverage,
+            borrowedAmount: metrics.borrowedAmount,
+            sharpe: metrics.sharpe,
+            drawdown: metrics.drawdown,
           },
         });
 

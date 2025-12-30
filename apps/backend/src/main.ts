@@ -1,7 +1,9 @@
-import { config as dotenvConfig } from "dotenv";
 import { resolve } from "node:path";
-import { NestFactory } from "@nestjs/core";
+
 import { ValidationPipe } from "@nestjs/common";
+import { NestFactory } from "@nestjs/core";
+import { config as dotenvConfig } from "dotenv";
+
 import { AppModule } from "./app.module";
 
 // Load .env from backend directory

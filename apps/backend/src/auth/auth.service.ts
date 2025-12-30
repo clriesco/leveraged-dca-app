@@ -1,7 +1,8 @@
 import { Injectable } from "@nestjs/common";
 import { createClient, SupabaseClient } from "@supabase/supabase-js";
-import { PrismaService } from "../prisma/prisma.service";
 import * as jwt from "jsonwebtoken";
+
+import { PrismaService } from "../prisma/prisma.service";
 
 /**
  * Authentication service using Supabase passwordless auth

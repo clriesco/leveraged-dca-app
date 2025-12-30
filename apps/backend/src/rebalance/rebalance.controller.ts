@@ -6,13 +6,18 @@ import {
   Body,
   HttpException,
   HttpStatus,
+  UseGuards,
 } from "@nestjs/common";
+
+import { AuthGuard } from "../auth/auth.guard";
+
 import { RebalanceService, RebalanceProposal } from "./rebalance.service";
 
 /**
  * Controller for portfolio rebalancing operations
  */
 @Controller("portfolios/:portfolioId/rebalance")
+@UseGuards(AuthGuard)
 export class RebalanceController {
   constructor(private readonly rebalanceService: RebalanceService) {}
 

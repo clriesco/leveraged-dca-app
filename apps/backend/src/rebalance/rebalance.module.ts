@@ -1,14 +1,17 @@
 import { Module } from "@nestjs/common";
+
+import { AuthModule } from "../auth/auth.module";
+import { PortfoliosModule } from "../portfolios/portfolios.module";
+import { PrismaModule } from "../prisma/prisma.module";
+
 import { RebalanceController } from "./rebalance.controller";
 import { RebalanceService } from "./rebalance.service";
-import { PrismaModule } from "../prisma/prisma.module";
-import { PortfoliosModule } from "../portfolios/portfolios.module";
 
 /**
  * Module for portfolio rebalancing operations
  */
 @Module({
-  imports: [PrismaModule, PortfoliosModule],
+  imports: [PrismaModule, PortfoliosModule, AuthModule],
   controllers: [RebalanceController],
   providers: [RebalanceService],
   exports: [RebalanceService],

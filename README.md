@@ -363,10 +363,10 @@ npm run lint
 ## 🔮 Roadmap
 
 ### High Priority
-- [ ] Configure cron jobs in production
-- [ ] Implement real equity calculation (track `borrowedAmount`)
-- [ ] Add auth middleware to all endpoints
-- [ ] Auto-fetch prices in position updates
+- [x] Configure cron jobs in production (see `infra/CRON_JOBS.md`)
+- [x] Implement real equity calculation (track `borrowedAmount`)
+- [x] Add auth middleware to all endpoints
+- [x] Auto-fetch prices in position updates
 
 ### Medium Priority
 - [ ] Improve pending contributions tracking
