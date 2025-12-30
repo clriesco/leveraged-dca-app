@@ -1,0 +1,13 @@
+services:
+  - type: web
+    name: leveraged-dca-backend
+    env: docker
+    dockerfilePath: ./apps/backend/Dockerfile
+    dockerContext: .
+    envVars:
+      - key: NODE_ENV
+        value: production
+      - key: PORT
+        value: 10000
+    healthCheckPath: /api/health
+    plan: free

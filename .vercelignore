@@ -1,0 +1,10 @@
+apps/backend
+packages
+infra
+node_modules
+*.md
+.git
+.env
+.env.local
+*.log
+

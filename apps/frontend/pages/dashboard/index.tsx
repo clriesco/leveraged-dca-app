@@ -24,7 +24,6 @@ interface Position {
   };
 }
 
-// eslint-disable-next-line @typescript-eslint/no-unused-vars
 interface PortfolioSummary {
   portfolio: {
     id: string;
