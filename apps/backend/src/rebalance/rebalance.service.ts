@@ -175,7 +175,7 @@ export class RebalanceService {
 
     // 3. Get all assets with their latest prices
     const assets = await this.prisma.asset.findMany();
-    const latestPrices = await this.getLatestPrices(assets.map((a) => a.id));
+    const latestPrices = await this.getLatestPrices(assets.map((a: any) => a.id));
 
     // 4. Calculate current portfolio state (includes pending contributions)
     const currentState = this.calculateCurrentState(
@@ -198,7 +198,7 @@ export class RebalanceService {
       portfolio.positions.map((p: any) => p.asset.symbol)
     );
     const relevantAssets = assets.filter(
-      (a) => portfolioAssetSymbols.has(a.symbol) || targetWeights[a.symbol] !== undefined
+      (a: any) => portfolioAssetSymbols.has(a.symbol) || targetWeights[a.symbol] !== undefined
     );
     
     const weightsToUse = await this.determineWeights(

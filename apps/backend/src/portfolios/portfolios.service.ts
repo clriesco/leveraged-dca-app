@@ -1,4 +1,5 @@
 import { Injectable, NotFoundException } from "@nestjs/common";
+import { MonthlyContribution } from "@prisma/client";
 
 import { PrismaService } from "../prisma/prisma.service";
 
@@ -81,7 +82,7 @@ export class PortfoliosService {
     );
 
     const contributionsByDate = new Map<string, number>();
-    contributions.forEach((contribution) => {
+    (contributions as MonthlyContribution[]).forEach((contribution: MonthlyContribution) => {
       const key = contribution.contributedAt.toISOString().split("T")[0];
       contributionsByDate.set(
         key,
@@ -89,8 +90,8 @@ export class PortfoliosService {
       );
     });
 
-    return metrics.map((metric, index) => {
-      const previous = index > 0 ? metrics[index - 1] : null;
+    return (metrics as any[]).map((metric: any, index: number) => {
+      const previous = index > 0 ? (metrics as any[])[index - 1] : null;
       const key = metric.date.toISOString().split("T")[0];
       const contribution = contributionsByDate.get(key) || 0;
       const pnl =
@@ -173,7 +174,7 @@ export class PortfoliosService {
 
     // Calculate total contributions (all)
     const totalContributions = portfolio.contributions.reduce(
-      (sum, c) => sum + c.amount,
+      (sum: number, c: any) => sum + c.amount,
       0
     );
 
@@ -242,7 +243,7 @@ export class PortfoliosService {
         : 0;
 
     // Calculate position weights using real-time exposure
-    const positionsWithWeights = portfolio.positions.map((pos) => {
+    const positionsWithWeights = portfolio.positions.map((pos: any) => {
       const price = latestPrices[pos.assetId] || pos.avgPrice;
       const currentValue = pos.quantity * price;
       return {

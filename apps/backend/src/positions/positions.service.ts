@@ -619,7 +619,7 @@ export class PositionsService {
       console.log(`[PositionsService] Verification: Found ${savedPrices.length} prices in database for ${symbol}`, {
         firstSavedDate: savedPrices[0]?.date.toISOString(),
         lastSavedDate: savedPrices[savedPrices.length - 1]?.date.toISOString(),
-        samplePrices: savedPrices.slice(0, 3).map(p => ({ date: p.date.toISOString(), price: p.close }))
+        samplePrices: savedPrices.slice(0, 3).map((p: any) => ({ date: p.date.toISOString(), price: p.close }))
       });
 
     } catch (error) {
@@ -685,7 +685,7 @@ export class PositionsService {
         );
         const remainingWeight = Math.max(0, 1 - existingWeightSum);
         const assetsWithoutWeight = allSymbols.filter(
-          (s) => !(s in updatedWeights) || updatedWeights[s] === 0
+          (s: string) => !(s in updatedWeights) || updatedWeights[s] === 0
         );
 
         if (assetsWithoutWeight.length > 0 && remainingWeight > 0) {
