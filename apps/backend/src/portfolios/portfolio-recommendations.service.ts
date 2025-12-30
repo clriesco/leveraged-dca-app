@@ -1,5 +1,4 @@
 import { Injectable, NotFoundException } from "@nestjs/common";
-import { Asset } from "@prisma/client";
 
 import { PrismaService } from "../prisma/prisma.service";
 
@@ -522,12 +521,12 @@ export class PortfolioRecommendationsService {
     });
 
     // Create asset map for quick lookup
-    const assetMap = new Map(assets.map((a: Asset) => [a.symbol, a]));
+    const assetMap = new Map(assets.map((a: any) => [a.symbol, a]));
 
     for (const [symbol, weight] of Object.entries(targetWeights)) {
       if (weight <= 0) continue;
 
-      const asset = assetMap.get(symbol) as Asset | undefined;
+      const asset = assetMap.get(symbol) as any;
       if (!asset) continue;
 
       const price = latestPrices[asset.id];

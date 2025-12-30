@@ -1,5 +1,4 @@
 import { Injectable, NotFoundException } from "@nestjs/common";
-import { MonthlyContribution } from "@prisma/client";
 
 import { PrismaService } from "../prisma/prisma.service";
 
@@ -82,7 +81,7 @@ export class PortfoliosService {
     );
 
     const contributionsByDate = new Map<string, number>();
-    (contributions as MonthlyContribution[]).forEach((contribution: MonthlyContribution) => {
+    (contributions as any[]).forEach((contribution: any) => {
       const key = contribution.contributedAt.toISOString().split("T")[0];
       contributionsByDate.set(
         key,
