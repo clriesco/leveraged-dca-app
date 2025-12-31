@@ -29,6 +29,80 @@ import {
   formatNumberES,
 } from "../../lib/number-format";
 
+/**
+ * Asset unit mapping based on asset type
+ */
+const ASSET_UNITS: Record<string, string> = {
+  commodity: "oz",
+  crypto: "shares",
+  index: "shares",
+  bond: "shares",
+  stock: "shares",
+};
+
+/**
+ * Crypto symbol to currency symbol mapping
+ */
+const CRYPTO_SYMBOLS: Record<string, string> = {
+  "BTC-USD": "₿",
+  "ETH-USD": "Ξ",
+  BTC: "₿",
+  ETH: "Ξ",
+};
+
+/**
+ * Get unit for an asset based on symbol and asset type
+ */
+function getUnitForAsset(symbol: string, assetType?: string): string {
+  // Check if we have a currency symbol for this crypto (by symbol or base symbol)
+  const baseSymbol = symbol.split("-")[0];
+
+  // First, check if we have a crypto symbol defined (even if assetType is not set)
+  if (CRYPTO_SYMBOLS[symbol]) {
+    return CRYPTO_SYMBOLS[symbol];
+  }
+  if (CRYPTO_SYMBOLS[baseSymbol]) {
+    return CRYPTO_SYMBOLS[baseSymbol];
+  }
+
+  // For crypto assets, use the currency symbol if available, otherwise use the base symbol
+  if (assetType === "crypto") {
+    // If no symbol found, return the base symbol (e.g., "SOL" for "SOL-USD")
+    return baseSymbol;
+  }
+
+  // Fallback: if symbol looks like crypto (ends with -USD and we have common crypto patterns)
+  // This handles cases where assetType might not be set correctly
+  const commonCryptoSymbols = [
+    "BTC",
+    "ETH",
+    "SOL",
+    "ADA",
+    "DOT",
+    "MATIC",
+    "AVAX",
+    "LINK",
+    "UNI",
+    "AAVE",
+  ];
+  if (symbol.includes("-USD") && commonCryptoSymbols.includes(baseSymbol)) {
+    return baseSymbol;
+  }
+
+  // Special cases: GLD and IAU are actually shares, not oz
+  if (symbol === "GLD" || symbol === "IAU") {
+    return "shares";
+  }
+
+  // Fall back to asset type
+  if (assetType && ASSET_UNITS[assetType]) {
+    return ASSET_UNITS[assetType];
+  }
+
+  // Default fallback
+  return "shares";
+}
+
 interface Position {
   id: string;
   quantity: number;
@@ -42,6 +116,7 @@ interface Position {
     id: string;
     symbol: string;
     name: string;
+    assetType?: string;
   };
 }
 
@@ -1297,7 +1372,7 @@ function Dashboard() {
                               </div>
                             </td>
                             <td style={tableCellStyle}>
-                              {formatNumberES(pos.weight * 100, {
+                              {formatNumberES(pos.weight, {
                                 minimumFractionDigits: 1,
                                 maximumFractionDigits: 1,
                               })}
@@ -1307,7 +1382,11 @@ function Dashboard() {
                               {formatNumberES(pos.quantity, {
                                 minimumFractionDigits: 0,
                                 maximumFractionDigits: 4,
-                              })}
+                              })}{" "}
+                              {getUnitForAsset(
+                                pos.asset.symbol,
+                                pos.asset.assetType
+                              )}
                             </td>
                             <td style={tableCellStyle}>
                               {formatCurrencyES(pos.avgPrice, {
