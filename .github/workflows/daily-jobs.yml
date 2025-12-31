@@ -24,29 +24,37 @@ jobs:
       github.event_name == 'schedule' ||
       (github.event_name == 'workflow_dispatch' && (github.event.inputs.job == 'all' || github.event.inputs.job == 'prices'))
     steps:
-      - uses: actions/checkout@v4
-
-      - name: Use Node.js
-        uses: actions/setup-node@v4
-        with:
-          node-version: "20"
-          cache: "npm"
-
-      - name: Install dependencies
+      - name: Call price ingestion endpoint
         run: |
-          npm ci
-          cd infra/scripts
-          npm ci
-
-      - name: Generate Prisma Client
-        run: npm --workspace apps/backend run prisma:generate
-
-      - name: Run price ingestion
-        working-directory: infra/scripts
-        run: npm run prices:ingest
-        env:
-          DATABASE_URL: ${{ secrets.DATABASE_URL }}
-          DIRECT_URL: ${{ secrets.DATABASE_URL }}
+          BACKEND_URL="${{ secrets.BACKEND_URL }}"
+          CRON_TOKEN="${{ secrets.CRON_SECRET_TOKEN }}"
+          
+          if [ -z "$BACKEND_URL" ]; then
+            echo "⚠️  BACKEND_URL secret not set. Skipping."
+            exit 0
+          fi
+          
+          if [ -z "$CRON_TOKEN" ]; then
+            echo "⚠️  CRON_SECRET_TOKEN secret not set. Skipping."
+            exit 0
+          fi
+          
+          echo "🔄 Calling price ingestion endpoint..."
+          response=$(curl -s -w "\n%{http_code}" \
+            -H "Authorization: Bearer $CRON_TOKEN" \
+            "$BACKEND_URL/api/cron/price-ingestion" || echo -e "\n000")
+          
+          http_code=$(echo "$response" | tail -n1)
+          body=$(echo "$response" | sed '$d')
+          
+          if [ "$http_code" = "200" ]; then
+            echo "✅ Price ingestion completed successfully"
+            echo "$body" | jq '.' 2>/dev/null || echo "$body"
+          else
+            echo "❌ Price ingestion failed with HTTP $http_code"
+            echo "$body"
+            exit 1
+          fi
 
   metrics-refresh:
     runs-on: ubuntu-latest
@@ -55,29 +63,37 @@ jobs:
       github.event_name == 'schedule' ||
       (github.event_name == 'workflow_dispatch' && (github.event.inputs.job == 'all' || github.event.inputs.job == 'metrics'))
     steps:
-      - uses: actions/checkout@v4
-
-      - name: Use Node.js
-        uses: actions/setup-node@v4
-        with:
-          node-version: "20"
-          cache: "npm"
-
-      - name: Install dependencies
+      - name: Call metrics refresh endpoint
         run: |
-          npm ci
-          cd infra/scripts
-          npm ci
-
-      - name: Generate Prisma Client
-        run: npm --workspace apps/backend run prisma:generate
-
-      - name: Run metrics refresh
-        working-directory: infra/scripts
-        run: npm run metrics:refresh
-        env:
-          DATABASE_URL: ${{ secrets.DATABASE_URL }}
-          DIRECT_URL: ${{ secrets.DATABASE_URL }}
+          BACKEND_URL="${{ secrets.BACKEND_URL }}"
+          CRON_TOKEN="${{ secrets.CRON_SECRET_TOKEN }}"
+          
+          if [ -z "$BACKEND_URL" ]; then
+            echo "⚠️  BACKEND_URL secret not set. Skipping."
+            exit 0
+          fi
+          
+          if [ -z "$CRON_TOKEN" ]; then
+            echo "⚠️  CRON_SECRET_TOKEN secret not set. Skipping."
+            exit 0
+          fi
+          
+          echo "🔄 Calling metrics refresh endpoint..."
+          response=$(curl -s -w "\n%{http_code}" \
+            -H "Authorization: Bearer $CRON_TOKEN" \
+            "$BACKEND_URL/api/cron/metrics-refresh" || echo -e "\n000")
+          
+          http_code=$(echo "$response" | tail -n1)
+          body=$(echo "$response" | sed '$d')
+          
+          if [ "$http_code" = "200" ]; then
+            echo "✅ Metrics refresh completed successfully"
+            echo "$body" | jq '.' 2>/dev/null || echo "$body"
+          else
+            echo "❌ Metrics refresh failed with HTTP $http_code"
+            echo "$body"
+            exit 1
+          fi
 
   daily-check:
     runs-on: ubuntu-latest
@@ -86,26 +102,34 @@ jobs:
       github.event_name == 'schedule' ||
       (github.event_name == 'workflow_dispatch' && (github.event.inputs.job == 'all' || github.event.inputs.job == 'daily-check'))
     steps:
-      - uses: actions/checkout@v4
-
-      - name: Use Node.js
-        uses: actions/setup-node@v4
-        with:
-          node-version: "20"
-          cache: "npm"
-
-      - name: Install dependencies
+      - name: Call daily check endpoint
         run: |
-          npm ci
-          cd infra/scripts
-          npm ci
-
-      - name: Generate Prisma Client
-        run: npm --workspace apps/backend run prisma:generate
-
-      - name: Run daily check
-        working-directory: infra/scripts
-        run: npm run daily:check
-        env:
-          DATABASE_URL: ${{ secrets.DATABASE_URL }}
-          DIRECT_URL: ${{ secrets.DATABASE_URL }}
+          BACKEND_URL="${{ secrets.BACKEND_URL }}"
+          CRON_TOKEN="${{ secrets.CRON_SECRET_TOKEN }}"
+          
+          if [ -z "$BACKEND_URL" ]; then
+            echo "⚠️  BACKEND_URL secret not set. Skipping."
+            exit 0
+          fi
+          
+          if [ -z "$CRON_TOKEN" ]; then
+            echo "⚠️  CRON_SECRET_TOKEN secret not set. Skipping."
+            exit 0
+          fi
+          
+          echo "🔍 Calling daily check endpoint..."
+          response=$(curl -s -w "\n%{http_code}" \
+            -H "Authorization: Bearer $CRON_TOKEN" \
+            "$BACKEND_URL/api/cron/daily-check" || echo -e "\n000")
+          
+          http_code=$(echo "$response" | tail -n1)
+          body=$(echo "$response" | sed '$d')
+          
+          if [ "$http_code" = "200" ]; then
+            echo "✅ Daily check completed successfully"
+            echo "$body" | jq '.' 2>/dev/null || echo "$body"
+          else
+            echo "❌ Daily check failed with HTTP $http_code"
+            echo "$body"
+            exit 1
+          fi

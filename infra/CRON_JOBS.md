@@ -55,13 +55,21 @@ Two workflows are configured:
 Configure the following secrets in your GitHub repository settings:
 
 1. **`BACKEND_URL`** - The full URL of your backend service (e.g., `https://your-app.onrender.com`)
-2. **`DATABASE_URL`** - PostgreSQL connection string for your database
+2. **`CRON_SECRET_TOKEN`** - Secret token to authenticate cron job requests (must match `CRON_SECRET_TOKEN` in backend environment)
 
 To add secrets:
 1. Go to your repository on GitHub
 2. Navigate to **Settings** → **Secrets and variables** → **Actions**
 3. Click **New repository secret**
 4. Add each secret with its value
+
+### Required Backend Environment Variables
+
+In your Render.com backend service, configure:
+
+1. **`CRON_SECRET_TOKEN`** - Secret token for authenticating cron requests (generate a strong random string)
+
+**Note:** The `CRON_SECRET_TOKEN` must be the same value in both GitHub Secrets and Render environment variables.
 
 ### Keep Alive Workflow
 
@@ -73,15 +81,20 @@ The keep-alive workflow runs every 10 minutes and pings the `/api/health` endpoi
 
 ### Daily Jobs Workflow
 
-The daily jobs workflow runs all three update scripts every 30 minutes in sequence:
+The daily jobs workflow calls backend endpoints every 30 minutes in sequence:
 
-1. **Price Ingestion** - Fetches latest prices from Yahoo Finance
-2. **Metrics Refresh** - Recalculates portfolio metrics (runs after price ingestion)
-3. **Daily Check** - Generates recommendations and alerts (runs after metrics refresh)
+1. **Price Ingestion** - Calls `/api/cron/price-ingestion` to fetch latest prices from Yahoo Finance
+2. **Metrics Refresh** - Calls `/api/cron/metrics-refresh` to recalculate portfolio metrics (runs after price ingestion)
+3. **Daily Check** - Calls `/api/cron/daily-check` to generate recommendations and alerts (runs after metrics refresh)
 
 **Schedule:** Every 30 minutes (`*/30 * * * *`)
 
 **Execution order:** Jobs run sequentially (price-ingestion → metrics-refresh → daily-check) to ensure data consistency.
+
+**Architecture:** GitHub Actions makes HTTP requests to backend endpoints. The backend executes the scripts internally, which is:
+- Faster (no dependency installation needed)
+- More secure (secrets stay in Render)
+- Simpler (no Prisma Client generation issues)
 
 **Manual trigger:** Available via GitHub Actions UI with job selection:
 - `all` - Run all three jobs in sequence

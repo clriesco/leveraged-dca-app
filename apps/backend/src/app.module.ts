@@ -4,6 +4,7 @@ import { AppController } from "./app.controller";
 import { AppService } from "./app.service";
 import { AuthModule } from "./auth/auth.module";
 import { ContributionsModule } from "./contributions/contributions.module";
+import { CronModule } from "./cron/cron.module";
 import { PortfoliosModule } from "./portfolios/portfolios.module";
 import { PositionsModule } from "./positions/positions.module";
 import { PrismaModule } from "./prisma/prisma.module";
@@ -19,6 +20,7 @@ import { UsersModule } from "./users/users.module";
     PositionsModule,
     PortfoliosModule,
     RebalanceModule,
+    CronModule,
   ],
   controllers: [AppController],
   providers: [AppService],
