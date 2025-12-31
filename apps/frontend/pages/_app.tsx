@@ -1,4 +1,5 @@
 import { AppProps } from "next/app";
+import Head from "next/head";
 import { AuthProvider } from "../contexts/AuthContext";
 
 /**
@@ -7,6 +8,10 @@ import { AuthProvider } from "../contexts/AuthContext";
 export default function App({ Component, pageProps }: AppProps) {
   return (
     <AuthProvider>
+      <Head>
+        <link rel="icon" type="image/svg+xml" href="/favicon.svg" />
+        <link rel="apple-touch-icon" href="/favicon.svg" />
+      </Head>
       <style jsx global>{`
         * {
           box-sizing: border-box;
