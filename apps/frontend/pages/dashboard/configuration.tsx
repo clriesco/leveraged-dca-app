@@ -914,19 +914,19 @@ export default function Configuration() {
                     padding: "0.875rem 2rem",
                     background:
                       isSaving || !weightsValid
-                        ? "#475569"
-                        : "linear-gradient(135deg, #3b82f6 0%, #8b5cf6 100%)",
-                    color: "white",
-                    border: "none",
+                        ? "rgba(255, 255, 255, 0.1)"
+                        : "linear-gradient(135deg, #10b981 0%, #059669 100%)",
+                    color: isSaving || !weightsValid ? "rgba(255, 255, 255, 0.5)" : "white",
+                    border: isSaving || !weightsValid ? "1px solid rgba(255, 255, 255, 0.1)" : "none",
                     borderRadius: "6px",
                     fontSize: "0.95rem",
                     fontWeight: "600",
                     cursor:
                       isSaving || !weightsValid ? "not-allowed" : "pointer",
-                    opacity: isSaving || !weightsValid ? 0.7 : 1,
+                    opacity: isSaving || !weightsValid ? 0.5 : 1,
                   }}
                 >
-                  {isSaving ? "Guardando..." : "💾 Guardar Configuración"}
+                  {isSaving ? "Guardando..." : "Guardar Configuración"}
                 </button>
               </div>
             </form>

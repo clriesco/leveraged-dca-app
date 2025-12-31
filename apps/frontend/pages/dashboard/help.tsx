@@ -835,7 +835,7 @@ export default function Help() {
               {[
                 {
                   type: "Leverage Bajo",
-                  priority: "urgent",
+                  priority: "urgente",
                   description:
                     "El leverage está por debajo del mínimo (2.5x). Necesitas reborrow y comprar más activos.",
                   action: "Ir a Rebalancear",
@@ -843,7 +843,7 @@ export default function Help() {
                 },
                 {
                   type: "Leverage Alto",
-                  priority: "high",
+                  priority: "alta",
                   description:
                     "El leverage está por encima del máximo (4.0x). Necesitas una aportación extra como colateral.",
                   action: "Ir a Añadir Aportación (extra)",
@@ -851,7 +851,7 @@ export default function Help() {
                 },
                 {
                   type: "Señal de Despliegue",
-                  priority: "medium",
+                  priority: "media",
                   description:
                     "Se ha activado una señal (drawdown, desviación, volatilidad). Es momento de desplegar capital.",
                   action: "Ir a Rebalancear",
@@ -859,7 +859,7 @@ export default function Help() {
                 },
                 {
                   type: "Rebalanceo Necesario",
-                  priority: "medium",
+                  priority: "media",
                   description:
                     "Los pesos actuales se desvían significativamente de los objetivos.",
                   action: "Ir a Rebalancear",
@@ -867,7 +867,7 @@ export default function Help() {
                 },
                 {
                   type: "Aportación Debida",
-                  priority: "low",
+                  priority: "baja",
                   description:
                     "Es el día programado para tu aportación mensual.",
                   action: "Ir a Añadir Aportación",
@@ -875,7 +875,7 @@ export default function Help() {
                 },
                 {
                   type: "En Rango",
-                  priority: "low",
+                  priority: "baja",
                   description:
                     "Todo está bien. El portfolio está dentro de los parámetros configurados.",
                   action: null,
