@@ -1,4 +1,4 @@
-import React, { useState, ReactNode, useEffect } from "react";
+import React, { useState, ReactNode, useEffect, useRef } from "react";
 import { useRouter } from "next/router";
 import { useAuth } from "../contexts/AuthContext";
 import {
@@ -55,6 +55,7 @@ export default function DashboardSidebar({
   const [isCollapsed, setIsCollapsed] = useState(false);
   const [isMobileMenuOpen, setIsMobileMenuOpen] = useState(false);
   const isMobile = useMediaQuery("(max-width: 768px)");
+  const isTablet = useMediaQuery("(min-width: 769px) and (max-width: 1024px)");
 
   const handleSignOut = async () => {
     try {
@@ -113,6 +114,32 @@ export default function DashboardSidebar({
   const isActive = (path: string) => {
     return router.pathname === path;
   };
+
+  // Auto-collapse sidebar on tablet sizes to prevent content cutoff
+  // Only auto-collapse when entering tablet range, not when user manually expands
+  const [userManuallyToggled, setUserManuallyToggled] = useState(false);
+  const prevTabletRef = useRef<boolean | null>(null);
+  
+  useEffect(() => {
+    // Initialize on mount
+    if (prevTabletRef.current === null) {
+      prevTabletRef.current = isTablet;
+      return;
+    }
+    
+    // Only auto-collapse when transitioning from desktop (false) to tablet (true)
+    if (isTablet && !isMobile && prevTabletRef.current === false && !userManuallyToggled) {
+      setIsCollapsed(true);
+    }
+    
+    // Update previous state
+    prevTabletRef.current = isTablet;
+    
+    // Reset manual toggle flag when leaving tablet range
+    if (!isTablet && userManuallyToggled) {
+      setUserManuallyToggled(false);
+    }
+  }, [isTablet, isMobile, userManuallyToggled]);
 
   // Close mobile menu when route changes
   useEffect(() => {
@@ -223,15 +250,29 @@ export default function DashboardSidebar({
           >
             <TrendingUp size={24} color="#60a5fa" />
             {!isCollapsed && (
-              <span
+              <a
+                href={`/dashboard${portfolioId ? `?portfolioId=${portfolioId}` : ""}`}
+                onClick={(e) => {
+                  e.preventDefault();
+                  router.push(`/dashboard${portfolioId ? `?portfolioId=${portfolioId}` : ""}`);
+                }}
                 style={{
                   color: "#f1f5f9",
                   fontWeight: "700",
                   fontSize: "1.125rem",
+                  textDecoration: "none",
+                  cursor: "pointer",
+                  transition: "color 0.2s",
+                }}
+                onMouseEnter={(e) => {
+                  e.currentTarget.style.color = "#60a5fa";
+                }}
+                onMouseLeave={(e) => {
+                  e.currentTarget.style.color = "#f1f5f9";
                 }}
               >
                 DCA App
-              </span>
+              </a>
             )}
           </div>
         </div>
@@ -304,7 +345,13 @@ export default function DashboardSidebar({
           {/* Collapse Button - Only show on desktop */}
           {!isMobile && (
             <button
-              onClick={() => setIsCollapsed(!isCollapsed)}
+              onClick={() => {
+                setIsCollapsed(!isCollapsed);
+                // Mark that user manually toggled to prevent auto-collapse
+                if (isTablet) {
+                  setUserManuallyToggled(true);
+                }
+              }}
               style={{
                 width: "100%",
                 padding: isCollapsed ? "0.875rem 0.5rem" : "0.875rem 1rem",
@@ -382,7 +429,9 @@ export default function DashboardSidebar({
           transition: "margin-left 0.2s ease",
           minHeight: "100vh",
           width: isMobile ? "100%" : "auto",
+          overflowX: "hidden",
         }}
+        className="main-content-wrapper"
       >
         {children}
       </div>
@@ -393,6 +442,15 @@ export default function DashboardSidebar({
           /* Ensure content is full width on mobile */
           :global(body) {
             overflow-x: hidden;
+          }
+          .main-content-wrapper {
+            max-width: 100% !important;
+            margin-left: 0 !important;
+          }
+        }
+        @media (min-width: 769px) and (max-width: 1023px) {
+          .main-content-wrapper {
+            max-width: calc(100vw - 70px) !important;
           }
         }
       `}</style>
