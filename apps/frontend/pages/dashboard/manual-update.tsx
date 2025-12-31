@@ -960,26 +960,34 @@ export default function ManualUpdate() {
                 )}
               </div>
 
-              <button
-                type="submit"
-                disabled={isSubmitting || !portfolioId}
+              <div
                 style={{
-                  width: "100%",
-                  padding: "1rem",
-                  background:
-                    "linear-gradient(135deg, #10b981 0%, #059669 100%)",
-                  color: "white",
-                  border: "none",
-                  borderRadius: "8px",
-                  fontSize: "1rem",
-                  fontWeight: "600",
-                  opacity: isSubmitting || !portfolioId ? 0.7 : 1,
-                  cursor:
-                    isSubmitting || !portfolioId ? "not-allowed" : "pointer",
+                  display: "flex",
+                  gap: "1rem",
+                  justifyContent: "flex-end",
+                  flexWrap: "wrap",
                 }}
               >
-                {isSubmitting ? "Guardando..." : "Guardar Estado Actual"}
-              </button>
+                <button
+                  type="submit"
+                  disabled={isSubmitting || !portfolioId}
+                  style={{
+                    padding: "0.875rem 2rem",
+                    background:
+                      "linear-gradient(135deg, #10b981 0%, #059669 100%)",
+                    color: "white",
+                    border: "none",
+                    borderRadius: "6px",
+                    fontSize: "0.95rem",
+                    fontWeight: "600",
+                    opacity: isSubmitting || !portfolioId ? 0.7 : 1,
+                    cursor:
+                      isSubmitting || !portfolioId ? "not-allowed" : "pointer",
+                  }}
+                >
+                  {isSubmitting ? "Guardando..." : "Guardar Estado Actual"}
+                </button>
+              </div>
             </form>
 
             {message && (

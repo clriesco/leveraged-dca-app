@@ -634,13 +634,17 @@ export default function Rebalance() {
                     color: "rgba(255, 255, 255, 0.8)",
                     fontSize: "0.9rem",
                     margin: 0,
+                    display: "flex",
+                    alignItems: "center",
+                    gap: "0.5rem",
+                    flexWrap: "wrap",
                   }}
                 >
-                  <div style={{ display: "flex", alignItems: "center", gap: "0.5rem" }}>
-                    <Lightbulb size={16} />
+                  <Lightbulb size={16} style={{ flexShrink: 0 }} />
+                  <span>
                     Ejecuta estas operaciones en tu broker, luego haz clic en
-                  </div>
-                  &quot;Aceptar&quot; para guardar la nueva composición.
+                    &quot;Aceptar&quot; para guardar la nueva composición.
+                  </span>
                 </p>
               </div>
 
@@ -652,21 +656,27 @@ export default function Rebalance() {
                 const isDisabled = isSubmitting || !needsRebalance;
 
                 return (
-                  <div style={{ display: "flex", gap: "1rem" }}>
+                  <div
+                    style={{
+                      display: "flex",
+                      gap: "1rem",
+                      justifyContent: "flex-end",
+                      flexWrap: "wrap",
+                    }}
+                  >
                     <button
                       onClick={handleAccept}
                       disabled={isDisabled}
                       style={{
-                        flex: 1,
-                        padding: "1rem",
+                        padding: "0.875rem 2rem",
                         background:
                           isDisabled
                             ? "rgba(255, 255, 255, 0.1)"
                             : "linear-gradient(135deg, #10b981 0%, #059669 100%)",
                         color: isDisabled ? "rgba(255, 255, 255, 0.5)" : "white",
                         border: isDisabled ? "1px solid rgba(255, 255, 255, 0.1)" : "none",
-                        borderRadius: "8px",
-                        fontSize: "1rem",
+                        borderRadius: "6px",
+                        fontSize: "0.95rem",
                         fontWeight: "600",
                         opacity: isDisabled ? 0.5 : 1,
                         cursor: isDisabled ? "not-allowed" : "pointer",

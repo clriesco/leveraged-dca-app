@@ -282,28 +282,36 @@ export default function Contribution() {
                   />
                 </div>
 
-                <button
-                  type="submit"
-                  disabled={isSubmitting || !portfolioId}
+                <div
                   style={{
-                    width: "100%",
-                    padding: "1rem",
-                    background:
-                      "linear-gradient(135deg, #667eea 0%, #764ba2 100%)",
-                    color: "white",
-                    border: "none",
-                    borderRadius: "8px",
-                    fontSize: "1rem",
-                    fontWeight: "600",
-                    opacity: isSubmitting || !portfolioId ? 0.7 : 1,
-                    cursor:
-                      isSubmitting || !portfolioId ? "not-allowed" : "pointer",
-                    minHeight: "48px",
+                    display: "flex",
+                    gap: "1rem",
+                    justifyContent: "flex-end",
+                    flexWrap: "wrap",
                   }}
-                  className="submit-button"
                 >
-                  {isSubmitting ? "Guardando..." : "Registrar Aportación"}
-                </button>
+                  <button
+                    type="submit"
+                    disabled={isSubmitting || !portfolioId}
+                    style={{
+                      padding: "0.875rem 2rem",
+                      background:
+                        "linear-gradient(135deg, #667eea 0%, #764ba2 100%)",
+                      color: "white",
+                      border: "none",
+                      borderRadius: "6px",
+                      fontSize: "0.95rem",
+                      fontWeight: "600",
+                      opacity: isSubmitting || !portfolioId ? 0.7 : 1,
+                      cursor:
+                        isSubmitting || !portfolioId ? "not-allowed" : "pointer",
+                      minHeight: "48px",
+                    }}
+                    className="submit-button"
+                  >
+                    {isSubmitting ? "Guardando..." : "Registrar Aportación"}
+                  </button>
+                </div>
               </div>
             </form>
 

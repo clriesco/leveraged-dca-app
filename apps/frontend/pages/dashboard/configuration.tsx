@@ -908,22 +908,6 @@ export default function Configuration() {
                 className="config-actions"
               >
                 <button
-                  type="button"
-                  onClick={() => router.push("/dashboard")}
-                  style={{
-                    padding: "0.875rem 1.5rem",
-                    background: "#1e293b",
-                    color: "#cbd5e1",
-                    border: "1px solid #334155",
-                    borderRadius: "6px",
-                    fontSize: "0.95rem",
-                    fontWeight: "500",
-                    cursor: "pointer",
-                  }}
-                >
-                  Cancelar
-                </button>
-                <button
                   type="submit"
                   disabled={isSaving || !weightsValid}
                   style={{
