@@ -208,9 +208,39 @@ export default function Configuration() {
     <>
       <Head>
         <title>Configuración - Leveraged DCA App</title>
+        <style dangerouslySetInnerHTML={{__html: `
+          @media (max-width: 768px) {
+            .config-wrapper {
+              padding: 1rem !important;
+              padding-top: 4rem !important;
+            }
+            .config-grid {
+              grid-template-columns: 1fr !important;
+              gap: 1rem !important;
+            }
+            .config-actions {
+              flex-direction: column-reverse !important;
+            }
+            .config-actions button {
+              width: 100% !important;
+            }
+          }
+          @media (max-width: 480px) {
+            .config-wrapper {
+              padding: 0.75rem !important;
+              padding-top: 4rem !important;
+            }
+          }
+        `}} />
       </Head>
       <DashboardSidebar portfolioId={portfolioId}>
-        <div style={{ padding: "2rem" }}>
+        <div
+          style={{
+            padding: "2rem",
+            paddingTop: "4rem",
+          }}
+          className="config-wrapper"
+        >
           <div style={{ maxWidth: "1200px", margin: "0 auto" }}>
             {/* Header */}
             <div
@@ -261,7 +291,7 @@ export default function Configuration() {
                   </div>
                 }
               >
-                <div style={gridStyle}>
+                <div style={gridStyle} className="config-grid">
                   <InputField
                     label="Monto de Aportación (USD)"
                     value={formData.monthlyContribution}
@@ -873,7 +903,9 @@ export default function Configuration() {
                   display: "flex",
                   gap: "1rem",
                   justifyContent: "flex-end",
+                  flexWrap: "wrap",
                 }}
+                className="config-actions"
               >
                 <button
                   type="button"

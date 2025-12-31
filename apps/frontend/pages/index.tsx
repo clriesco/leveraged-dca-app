@@ -78,7 +78,26 @@ export default function Home() {
           minHeight: "100vh",
           padding: "2rem",
         }}
+        className="login-container"
       >
+        <style jsx>{`
+          @media (max-width: 768px) {
+            .login-container {
+              padding: 1rem !important;
+            }
+            .login-container > div {
+              padding: 2rem 1.5rem !important;
+            }
+          }
+          @media (max-width: 480px) {
+            .login-container > div {
+              padding: 1.5rem 1rem !important;
+            }
+            .login-container h1 {
+              font-size: 1.5rem !important;
+            }
+          }
+        `}</style>
         <div
           style={{
             background: "#131b2e",

@@ -1,4 +1,4 @@
-import React, { useState, ReactNode } from "react";
+import React, { useState, ReactNode, useEffect } from "react";
 import { useRouter } from "next/router";
 import { useAuth } from "../contexts/AuthContext";
 import {
@@ -13,11 +13,33 @@ import {
   ChevronLeft,
   ChevronRight,
   BookOpen,
+  Menu,
+  X,
 } from "lucide-react";
+
+/**
+ * Hook to detect screen size
+ */
+function useMediaQuery(query: string): boolean {
+  const [matches, setMatches] = useState(false);
+
+  useEffect(() => {
+    const media = window.matchMedia(query);
+    if (media.matches !== matches) {
+      setMatches(media.matches);
+    }
+    const listener = () => setMatches(media.matches);
+    media.addEventListener("change", listener);
+    return () => media.removeEventListener("change", listener);
+  }, [matches, query]);
+
+  return matches;
+}
 
 /**
  * Dashboard Sidebar Component
  * Collapsible sidebar menu for dashboard navigation (Supabase-style)
+ * Responsive: drawer on mobile, sidebar on desktop
  */
 interface DashboardSidebarProps {
   children: ReactNode;
@@ -31,6 +53,8 @@ export default function DashboardSidebar({
   const router = useRouter();
   const { signOut } = useAuth();
   const [isCollapsed, setIsCollapsed] = useState(false);
+  const [isMobileMenuOpen, setIsMobileMenuOpen] = useState(false);
+  const isMobile = useMediaQuery("(max-width: 768px)");
 
   const handleSignOut = async () => {
     try {
@@ -90,22 +114,96 @@ export default function DashboardSidebar({
     return router.pathname === path;
   };
 
+  // Close mobile menu when route changes
+  useEffect(() => {
+    const handleRouteChange = () => {
+      if (isMobile) {
+        setIsMobileMenuOpen(false);
+      }
+    };
+    router.events?.on("routeChangeComplete", handleRouteChange);
+    return () => {
+      router.events?.off("routeChangeComplete", handleRouteChange);
+    };
+  }, [router, isMobile]);
+
+  // Handle navigation with mobile menu close
+  const handleNavigation = (path: string) => {
+    const fullPath =
+      path === "/dashboard"
+        ? `${path}?portfolioId=${portfolioId}`
+        : `${path}?portfolioId=${portfolioId}`;
+    router.push(fullPath);
+    if (isMobile) {
+      setIsMobileMenuOpen(false);
+    }
+  };
+
+  const sidebarWidth = isMobile ? "280px" : isCollapsed ? "70px" : "260px";
+  const sidebarStyle: React.CSSProperties = {
+    width: sidebarWidth,
+    background: "#0f172a",
+    borderRight: "1px solid #1e293b",
+    display: "flex",
+    flexDirection: "column",
+    transition: "transform 0.3s ease, width 0.2s ease",
+    position: "fixed",
+    height: "100vh",
+    zIndex: 1000,
+    top: 0,
+    left: 0,
+    ...(isMobile && {
+      transform: isMobileMenuOpen ? "translateX(0)" : "translateX(-100%)",
+      boxShadow: isMobileMenuOpen ? "4px 0 24px rgba(0, 0, 0, 0.5)" : "none",
+    }),
+  };
+
   return (
     <div style={{ display: "flex", minHeight: "100vh" }}>
+      {/* Mobile Menu Overlay */}
+      {isMobile && isMobileMenuOpen && (
+        <div
+          style={{
+            position: "fixed",
+            top: 0,
+            left: 0,
+            right: 0,
+            bottom: 0,
+            background: "rgba(0, 0, 0, 0.5)",
+            zIndex: 999,
+          }}
+          onClick={() => setIsMobileMenuOpen(false)}
+        />
+      )}
+
+      {/* Mobile Menu Button */}
+      {isMobile && (
+        <button
+          onClick={() => setIsMobileMenuOpen(!isMobileMenuOpen)}
+          style={{
+            position: "fixed",
+            top: "1rem",
+            left: "1rem",
+            zIndex: 1001,
+            padding: "0.625rem",
+            background: "#131b2e",
+            border: "1px solid #334155",
+            borderRadius: "8px",
+            color: "#cbd5e1",
+            cursor: "pointer",
+            display: "flex",
+            alignItems: "center",
+            justifyContent: "center",
+            boxShadow: "0 4px 12px rgba(0, 0, 0, 0.3)",
+          }}
+          aria-label="Toggle menu"
+        >
+          {isMobileMenuOpen ? <X size={24} /> : <Menu size={24} />}
+        </button>
+      )}
+
       {/* Sidebar */}
-      <div
-        style={{
-          width: isCollapsed ? "70px" : "260px",
-          background: "#0f172a",
-          borderRight: "1px solid #1e293b",
-          display: "flex",
-          flexDirection: "column",
-          transition: "width 0.2s ease",
-          position: "fixed",
-          height: "100vh",
-          zIndex: 1000,
-        }}
-      >
+      <div style={sidebarStyle}>
         {/* Logo / Header */}
         <div
           style={{
@@ -151,13 +249,7 @@ export default function DashboardSidebar({
             return (
               <button
                 key={item.path}
-                onClick={() => {
-                  const path =
-                    item.path === "/dashboard"
-                      ? `${item.path}?portfolioId=${portfolioId}`
-                      : `${item.path}?portfolioId=${portfolioId}`;
-                  router.push(path);
-                }}
+                onClick={() => handleNavigation(item.path)}
                 style={{
                   width: "100%",
                   padding: isCollapsed ? "0.875rem 0.5rem" : "0.875rem 1rem",
@@ -209,42 +301,44 @@ export default function DashboardSidebar({
             padding: "1rem 0.5rem",
           }}
         >
-          {/* Collapse Button */}
-          <button
-            onClick={() => setIsCollapsed(!isCollapsed)}
-            style={{
-              width: "100%",
-              padding: isCollapsed ? "0.875rem 0.5rem" : "0.875rem 1rem",
-              background: "transparent",
-              color: "#64748b",
-              border: "none",
-              borderRadius: "8px",
-              fontSize: "0.9375rem",
-              fontWeight: "500",
-              cursor: "pointer",
-              display: "flex",
-              alignItems: "center",
-              gap: "0.875rem",
-              marginBottom: "0.25rem",
-              transition: "all 0.15s ease",
-              justifyContent: isCollapsed ? "center" : "flex-start",
-            }}
-            onMouseEnter={(e) => {
-              e.currentTarget.style.background = "rgba(255, 255, 255, 0.05)";
-              e.currentTarget.style.color = "#cbd5e1";
-            }}
-            onMouseLeave={(e) => {
-              e.currentTarget.style.background = "transparent";
-              e.currentTarget.style.color = "#64748b";
-            }}
-          >
-            {isCollapsed ? (
-              <ChevronRight size={20} style={{ flexShrink: 0 }} />
-            ) : (
-              <ChevronLeft size={20} style={{ flexShrink: 0 }} />
-            )}
-            {!isCollapsed && <span>Colapsar</span>}
-          </button>
+          {/* Collapse Button - Only show on desktop */}
+          {!isMobile && (
+            <button
+              onClick={() => setIsCollapsed(!isCollapsed)}
+              style={{
+                width: "100%",
+                padding: isCollapsed ? "0.875rem 0.5rem" : "0.875rem 1rem",
+                background: "transparent",
+                color: "#64748b",
+                border: "none",
+                borderRadius: "8px",
+                fontSize: "0.9375rem",
+                fontWeight: "500",
+                cursor: "pointer",
+                display: "flex",
+                alignItems: "center",
+                gap: "0.875rem",
+                marginBottom: "0.25rem",
+                transition: "all 0.15s ease",
+                justifyContent: isCollapsed ? "center" : "flex-start",
+              }}
+              onMouseEnter={(e) => {
+                e.currentTarget.style.background = "rgba(255, 255, 255, 0.05)";
+                e.currentTarget.style.color = "#cbd5e1";
+              }}
+              onMouseLeave={(e) => {
+                e.currentTarget.style.background = "transparent";
+                e.currentTarget.style.color = "#64748b";
+              }}
+            >
+              {isCollapsed ? (
+                <ChevronRight size={20} style={{ flexShrink: 0 }} />
+              ) : (
+                <ChevronLeft size={20} style={{ flexShrink: 0 }} />
+              )}
+              {!isCollapsed && <span>Colapsar</span>}
+            </button>
+          )}
 
           {/* Sign Out Button */}
           <button
@@ -283,14 +377,25 @@ export default function DashboardSidebar({
       {/* Main Content */}
       <div
         style={{
-          marginLeft: isCollapsed ? "70px" : "260px",
+          marginLeft: isMobile ? "0" : isCollapsed ? "70px" : "260px",
           flex: 1,
           transition: "margin-left 0.2s ease",
           minHeight: "100vh",
+          width: isMobile ? "100%" : "auto",
         }}
       >
         {children}
       </div>
+
+      {/* Responsive styles */}
+      <style jsx>{`
+        @media (max-width: 768px) {
+          /* Ensure content is full width on mobile */
+          :global(body) {
+            overflow-x: hidden;
+          }
+        }
+      `}</style>
     </div>
   );
 }

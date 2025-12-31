@@ -326,9 +326,150 @@ function Dashboard() {
     <React.Fragment>
       <Head>
         <title>Dashboard - Leveraged DCA App</title>
+        <style
+          dangerouslySetInnerHTML={{
+            __html: `
+          @keyframes pulse {
+            0%, 100% { opacity: 1; }
+            50% { opacity: 0.5; }
+          }
+          @media (max-width: 768px) {
+            .dashboard-content-wrapper {
+              padding: 1rem !important;
+              padding-top: 4rem !important;
+            }
+            .dashboard-header {
+              flex-direction: column !important;
+              margin-bottom: 1.5rem !important;
+            }
+            .dashboard-header h1 {
+              font-size: 1.5rem !important;
+            }
+            .metrics-grid {
+              grid-template-columns: 1fr !important;
+              gap: 1rem !important;
+            }
+            .analytics-grid {
+              grid-template-columns: 1fr !important;
+              gap: 0.75rem !important;
+            }
+            .positions-actions {
+              display: none !important;
+            }
+            .positions-table-desktop {
+              display: none !important;
+            }
+            .positions-cards-mobile {
+              display: block !important;
+            }
+            .history-table-desktop {
+              display: none !important;
+            }
+            .history-cards-mobile {
+              display: block !important;
+            }
+          }
+          @media (max-width: 480px) {
+            .dashboard-content-wrapper {
+              padding: 0.75rem !important;
+              padding-top: 4rem !important;
+            }
+          }
+          .positions-cards-mobile {
+            display: none;
+          }
+          .position-card {
+            background: rgba(255, 255, 255, 0.03);
+            border: 1px solid rgba(148, 163, 184, 0.2);
+            border-radius: 12px;
+            padding: 1rem;
+            margin-bottom: 1rem;
+          }
+          .position-card-header {
+            display: flex;
+            justify-content: space-between;
+            align-items: flex-start;
+            margin-bottom: 0.75rem;
+            padding-bottom: 0.75rem;
+            border-bottom: 1px solid rgba(148, 163, 184, 0.1);
+          }
+          .position-card-row {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            margin-bottom: 0.5rem;
+          }
+          .position-card-label {
+            color: #94a3b8;
+            font-size: 0.8125rem;
+            font-weight: 500;
+          }
+          .position-card-value {
+            color: #f1f5f9;
+            font-size: 0.9375rem;
+            font-weight: 600;
+            text-align: right;
+          }
+          .history-cards-mobile {
+            display: none;
+          }
+          .history-card {
+            background: rgba(255, 255, 255, 0.03);
+            border: 1px solid rgba(148, 163, 184, 0.2);
+            border-radius: 12px;
+            padding: 1rem;
+            margin-bottom: 1rem;
+          }
+          .history-card-header {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            margin-bottom: 0.75rem;
+            padding-bottom: 0.75rem;
+            border-bottom: 1px solid rgba(148, 163, 184, 0.1);
+          }
+          .history-card-row {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            margin-bottom: 0.5rem;
+          }
+          .history-card-label {
+            color: #94a3b8;
+            font-size: 0.8125rem;
+            font-weight: 500;
+          }
+          .history-card-value {
+            color: #f1f5f9;
+            font-size: 0.9375rem;
+            font-weight: 600;
+            text-align: right;
+          }
+          .composition-tags {
+            display: flex;
+            flex-wrap: wrap;
+            gap: 0.35rem;
+            margin-top: 0.5rem;
+          }
+          .composition-tag {
+            border: 1px solid rgba(255,255,255,0.2);
+            border-radius: 999px;
+            padding: 0.2rem 0.55rem;
+            font-size: 0.75rem;
+            color: #cbd5e1;
+          }
+        `,
+          }}
+        />
       </Head>
       <DashboardSidebar portfolioId={portfolioId}>
-        <div style={{ padding: "2rem" }}>
+        <div
+          style={{
+            padding: "2rem",
+            paddingTop: "4rem",
+          }}
+          className="dashboard-content-wrapper"
+        >
           <div style={{ maxWidth: "1600px", margin: "0 auto" }}>
             {/* Header */}
             <div
@@ -339,7 +480,10 @@ function Dashboard() {
                 display: "flex",
                 justifyContent: "space-between",
                 alignItems: "flex-start",
+                flexWrap: "wrap",
+                gap: "1rem",
               }}
+              className="dashboard-header"
             >
               <div>
                 <h1
@@ -655,19 +799,6 @@ function Dashboard() {
                     </table>
                   </div>
                 </div>
-
-                {/* CSS Animation for pulse effect */}
-                <style jsx>{`
-                  @keyframes pulse {
-                    0%,
-                    100% {
-                      opacity: 1;
-                    }
-                    50% {
-                      opacity: 0.5;
-                    }
-                  }
-                `}</style>
               </>
             )}
 
@@ -697,6 +828,7 @@ function Dashboard() {
                     gap: "1.5rem",
                     marginBottom: "2rem",
                   }}
+                  className="metrics-grid"
                 >
                   <MetricCard
                     title="Equity"
@@ -814,6 +946,7 @@ function Dashboard() {
                           "repeat(auto-fit, minmax(200px, 1fr))",
                         gap: "1rem",
                       }}
+                      className="analytics-grid"
                     >
                       {[
                         {
@@ -1067,9 +1200,20 @@ function Dashboard() {
                   >
                     Historial Mensual
                   </h2>
-                  <div style={{ overflowX: "auto" }}>
+                  <div
+                    style={{
+                      overflowX: "auto",
+                      WebkitOverflowScrolling: "touch",
+                      msOverflowStyle: "-ms-autohiding-scrollbar",
+                    }}
+                    className="table-container history-table-desktop"
+                  >
                     <table
-                      style={{ width: "100%", borderCollapse: "collapse" }}
+                      style={{
+                        width: "100%",
+                        borderCollapse: "collapse",
+                        minWidth: "600px",
+                      }}
                     >
                       <thead>
                         <tr style={{ borderBottom: "1px solid #1e293b" }}>
@@ -1169,6 +1313,102 @@ function Dashboard() {
                       </tbody>
                     </table>
                   </div>
+
+                  {/* Mobile Cards for History */}
+                  <div className="history-cards-mobile">
+                    {paginatedHistory.map((point, idx) => (
+                      <div
+                        key={`${point.date}-${idx}`}
+                        className="history-card"
+                      >
+                        <div className="history-card-header">
+                          <div>
+                            <div
+                              style={{
+                                fontWeight: "600",
+                                color: "#f1f5f9",
+                                fontSize: "1rem",
+                              }}
+                            >
+                              {new Date(point.date).toLocaleDateString(
+                                "es-ES",
+                                {
+                                  month: "long",
+                                  year: "numeric",
+                                }
+                              )}
+                            </div>
+                          </div>
+                          <div style={{ textAlign: "right" }}>
+                            <div
+                              style={{
+                                color:
+                                  (point.pnl ?? 0) >= 0 ? "#22c55e" : "#f87171",
+                                fontWeight: "700",
+                                fontSize: "1.125rem",
+                              }}
+                            >
+                              {formatCurrencyES(point.pnl ?? 0)}
+                            </div>
+                          </div>
+                        </div>
+                        <div className="history-card-row">
+                          <span className="history-card-label">Equity</span>
+                          <span className="history-card-value">
+                            {formatCurrencyES(Math.round(point.equity))}
+                          </span>
+                        </div>
+                        <div className="history-card-row">
+                          <span className="history-card-label">Exposición</span>
+                          <span className="history-card-value">
+                            {formatCurrencyES(Math.round(point.exposure))}
+                          </span>
+                        </div>
+                        <div className="history-card-row">
+                          <span className="history-card-label">Leverage</span>
+                          <span className="history-card-value">
+                            {formatNumberES(point.leverage, {
+                              minimumFractionDigits: 2,
+                              maximumFractionDigits: 2,
+                            })}
+                            x
+                          </span>
+                        </div>
+                        {point.composition && point.composition.length > 0 && (
+                          <div
+                            style={{
+                              marginTop: "0.75rem",
+                              paddingTop: "0.75rem",
+                              borderTop: "1px solid rgba(148, 163, 184, 0.1)",
+                            }}
+                          >
+                            <div
+                              className="history-card-label"
+                              style={{ marginBottom: "0.5rem" }}
+                            >
+                              Composición
+                            </div>
+                            <div className="composition-tags">
+                              {point.composition.map((asset) => (
+                                <span
+                                  key={`${asset.symbol}-${asset.weight}`}
+                                  className="composition-tag"
+                                >
+                                  {asset.symbol}{" "}
+                                  {formatNumberES(asset.weight * 100, {
+                                    minimumFractionDigits: 1,
+                                    maximumFractionDigits: 1,
+                                  })}
+                                  %
+                                </span>
+                              ))}
+                            </div>
+                          </div>
+                        )}
+                      </div>
+                    ))}
+                  </div>
+
                   {/* Pagination Controls */}
                   {totalPages > 1 && (
                     <div
@@ -1270,7 +1510,14 @@ function Dashboard() {
                     >
                       Posiciones Actuales
                     </h2>
-                    <div style={{ display: "flex", gap: "0.75rem" }}>
+                    <div
+                      style={{
+                        display: "flex",
+                        gap: "0.75rem",
+                        flexWrap: "wrap",
+                      }}
+                      className="positions-actions"
+                    >
                       <button
                         onClick={() =>
                           router.push(
@@ -1335,9 +1582,19 @@ function Dashboard() {
                       </button>
                     </div>
                   </div>
-                  <div style={{ overflowX: "auto" }}>
+                  <div
+                    style={{
+                      overflowX: "auto",
+                      WebkitOverflowScrolling: "touch",
+                    }}
+                    className="table-container positions-table-desktop"
+                  >
                     <table
-                      style={{ width: "100%", borderCollapse: "collapse" }}
+                      style={{
+                        width: "100%",
+                        borderCollapse: "collapse",
+                        minWidth: "700px",
+                      }}
                     >
                       <thead>
                         <tr style={{ borderBottom: "1px solid #1e293b" }}>
@@ -1428,6 +1685,115 @@ function Dashboard() {
                       </tbody>
                     </table>
                   </div>
+
+                  {/* Mobile Cards */}
+                  <div className="positions-cards-mobile">
+                    {summary.positions.map((pos: Position) => (
+                      <div key={pos.id} className="position-card">
+                        <div className="position-card-header">
+                          <div>
+                            <div
+                              style={{
+                                fontWeight: "600",
+                                color: "#f1f5f9",
+                                fontSize: "1rem",
+                                marginBottom: "0.25rem",
+                              }}
+                            >
+                              {pos.asset.name}
+                            </div>
+                            <div
+                              style={{
+                                color: "#64748b",
+                                fontSize: "0.8125rem",
+                              }}
+                            >
+                              {pos.asset.symbol}
+                            </div>
+                          </div>
+                          <div style={{ textAlign: "right" }}>
+                            <div
+                              style={{
+                                color: pos.pnl >= 0 ? "#22c55e" : "#ef4444",
+                                fontWeight: "700",
+                                fontSize: "1.125rem",
+                                marginBottom: "0.25rem",
+                              }}
+                            >
+                              {pos.pnl >= 0 ? "+" : ""}
+                              {formatCurrencyES(pos.pnl)}
+                            </div>
+                            <div
+                              style={{
+                                color: pos.pnl >= 0 ? "#22c55e" : "#ef4444",
+                                fontSize: "0.8125rem",
+                                opacity: 0.9,
+                              }}
+                            >
+                              {formatPercentES(pos.pnlPercent / 100)}
+                            </div>
+                          </div>
+                        </div>
+                        <div className="position-card-row">
+                          <span className="position-card-label">Peso</span>
+                          <span className="position-card-value">
+                            {formatNumberES(pos.weight, {
+                              minimumFractionDigits: 1,
+                              maximumFractionDigits: 1,
+                            })}
+                            %
+                          </span>
+                        </div>
+                        <div className="position-card-row">
+                          <span className="position-card-label">Cantidad</span>
+                          <span className="position-card-value">
+                            {formatNumberES(pos.quantity, {
+                              minimumFractionDigits: 0,
+                              maximumFractionDigits: 4,
+                            })}{" "}
+                            {getUnitForAsset(
+                              pos.asset.symbol,
+                              pos.asset.assetType
+                            )}
+                          </span>
+                        </div>
+                        <div className="position-card-row">
+                          <span className="position-card-label">
+                            Precio Medio
+                          </span>
+                          <span className="position-card-value">
+                            {formatCurrencyES(pos.avgPrice, {
+                              minimumFractionDigits: 2,
+                              maximumFractionDigits: 2,
+                            })}
+                          </span>
+                        </div>
+                        <div className="position-card-row">
+                          <span className="position-card-label">
+                            Precio Actual
+                          </span>
+                          <span className="position-card-value">
+                            {formatCurrencyES(pos.currentPrice, {
+                              minimumFractionDigits: 2,
+                              maximumFractionDigits: 2,
+                            })}
+                          </span>
+                        </div>
+                        <div
+                          className="position-card-row"
+                          style={{ marginBottom: 0 }}
+                        >
+                          <span className="position-card-label">Valor</span>
+                          <span
+                            className="position-card-value"
+                            style={{ fontSize: "1rem", fontWeight: "700" }}
+                          >
+                            {formatCurrencyES(pos.exposureUsd)}
+                          </span>
+                        </div>
+                      </div>
+                    ))}
+                  </div>
                 </div>
               </>
             )}
@@ -1446,11 +1812,23 @@ function EquityChart({ data }: { data: MetricsPoint[] }) {
   const [_containerRef, setContainerRef] = useState<HTMLDivElement | null>(
     null
   );
+  const [isMobile, setIsMobile] = useState(false);
+
+  // Detect mobile on client side only
+  useEffect(() => {
+    const checkMobile = () => {
+      setIsMobile(window.innerWidth < 768);
+    };
+    checkMobile();
+    window.addEventListener("resize", checkMobile);
+    return () => window.removeEventListener("resize", checkMobile);
+  }, []);
 
   if (data.length === 0) return null;
 
-  const width = 1200; // Increased from 900 to use more horizontal space
-  const height = 220;
+  // Responsive chart dimensions
+  const width = isMobile ? 600 : 1200;
+  const height = isMobile ? 180 : 220;
   const padding = 40;
   const firstEquity = data[0]?.equity || 0;
   const lastEquity = data[data.length - 1]?.equity || 0;

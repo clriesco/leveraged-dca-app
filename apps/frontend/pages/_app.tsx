@@ -25,6 +25,7 @@ export default function App({ Component, pageProps }: AppProps) {
           background: #0a0e27;
           min-height: 100vh;
           color: #e2e8f0;
+          overflow-x: hidden;
         }
 
         button {
@@ -35,6 +36,67 @@ export default function App({ Component, pageProps }: AppProps) {
         button:hover {
           transform: translateY(-1px);
           box-shadow: 0 4px 12px rgba(0, 0, 0, 0.15);
+        }
+
+        /* Responsive adjustments */
+        @media (max-width: 768px) {
+          body {
+            font-size: 14px;
+          }
+
+          h1 {
+            font-size: 1.5rem !important;
+          }
+
+          h2 {
+            font-size: 1.25rem !important;
+          }
+
+          /* Improve touch targets */
+          button {
+            min-height: 44px;
+            min-width: 44px;
+          }
+
+          /* Better table scrolling on mobile */
+          .table-container {
+            -webkit-overflow-scrolling: touch;
+            scrollbar-width: thin;
+          }
+
+          .table-container::-webkit-scrollbar {
+            height: 8px;
+          }
+
+          .table-container::-webkit-scrollbar-track {
+            background: rgba(255, 255, 255, 0.05);
+          }
+
+          .table-container::-webkit-scrollbar-thumb {
+            background: rgba(255, 255, 255, 0.2);
+            border-radius: 4px;
+          }
+        }
+
+        @media (max-width: 480px) {
+          body {
+            font-size: 13px;
+          }
+
+          h1 {
+            font-size: 1.25rem !important;
+          }
+
+          h2 {
+            font-size: 1.125rem !important;
+          }
+        }
+
+        /* Prevent horizontal scroll */
+        html,
+        body {
+          max-width: 100%;
+          overflow-x: hidden;
         }
       `}</style>
       <Component {...pageProps} />

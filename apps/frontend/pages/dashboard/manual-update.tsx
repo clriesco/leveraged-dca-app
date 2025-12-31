@@ -23,6 +23,7 @@ import {
   formatForInput,
   parseNumberES,
 } from "../../lib/number-format";
+import { Trash2 } from "lucide-react";
 
 interface Asset {
   id: string;
@@ -581,44 +582,18 @@ export default function ManualUpdate() {
                                 : "none",
                           }}
                         >
-                          <div
+                          <label
                             style={{
-                              display: "flex",
-                              justifyContent: "space-between",
-                              alignItems: "center",
+                              display: "block",
+                              fontWeight: "500",
+                              color: "rgba(255, 255, 255, 0.9)",
                               marginBottom: "0.5rem",
                             }}
                           >
-                            <label
-                              style={{
-                                display: "block",
-                                fontWeight: "500",
-                                color: "rgba(255, 255, 255, 0.9)",
-                              }}
-                            >
-                              {pos.assetId
-                                ? `${pos.assetName} (${pos.assetSymbol})`
-                                : "Nuevo Activo"}
-                            </label>
-                            <button
-                              type="button"
-                              onClick={() => handleRemovePosition(originalIdx)}
-                              disabled={isSubmitting}
-                              style={{
-                                padding: "0.25rem 0.5rem",
-                                background: "rgba(239, 68, 68, 0.2)",
-                                color: "#ef4444",
-                                border: "1px solid rgba(239, 68, 68, 0.4)",
-                                borderRadius: "4px",
-                                fontSize: "0.75rem",
-                                cursor: isSubmitting
-                                  ? "not-allowed"
-                                  : "pointer",
-                              }}
-                            >
-                              {pos.assetId ? "Eliminar" : "Eliminar"}
-                            </button>
-                          </div>
+                            {pos.assetId
+                              ? `${pos.assetName} (${pos.assetSymbol})`
+                              : "Nuevo Activo"}
+                          </label>
 
                           {!pos.assetId && (
                             <div
@@ -627,45 +602,87 @@ export default function ManualUpdate() {
                                 marginBottom: "0.75rem",
                               }}
                             >
-                              <input
-                                type="text"
-                                value={pos.assetSymbol}
-                                onChange={(e) =>
-                                  handlePositionSymbolChange(
-                                    originalIdx,
-                                    e.target.value
-                                  )
-                                }
-                                onFocus={() => {
-                                  if (searchResults[originalIdx]?.length > 0) {
-                                    setShowDropdown((prev) => ({
-                                      ...prev,
-                                      [originalIdx]: true,
-                                    }));
-                                  }
-                                }}
-                                onBlur={() => {
-                                  // Delay to allow click on dropdown item
-                                  setTimeout(() => {
-                                    setShowDropdown((prev) => ({
-                                      ...prev,
-                                      [originalIdx]: false,
-                                    }));
-                                  }, 200);
-                                }}
-                                placeholder="Buscar símbolo (ej: BTC-USD, SPY, GLD)"
-                                disabled={isSubmitting}
+                              <div
                                 style={{
-                                  width: "100%",
-                                  padding: "0.75rem 1rem",
-                                  background: "rgba(255, 255, 255, 0.1)",
-                                  color: "white",
-                                  border: "2px solid rgba(59, 130, 246, 0.4)",
-                                  borderRadius: "8px",
-                                  fontSize: "1rem",
-                                  boxSizing: "border-box",
+                                  display: "flex",
+                                  gap: "0.5rem",
+                                  alignItems: "flex-start",
                                 }}
-                              />
+                              >
+                                <input
+                                  type="text"
+                                  value={pos.assetSymbol}
+                                  onChange={(e) =>
+                                    handlePositionSymbolChange(
+                                      originalIdx,
+                                      e.target.value
+                                    )
+                                  }
+                                  onFocus={() => {
+                                    if (searchResults[originalIdx]?.length > 0) {
+                                      setShowDropdown((prev) => ({
+                                        ...prev,
+                                        [originalIdx]: true,
+                                      }));
+                                    }
+                                  }}
+                                  onBlur={() => {
+                                    // Delay to allow click on dropdown item
+                                    setTimeout(() => {
+                                      setShowDropdown((prev) => ({
+                                        ...prev,
+                                        [originalIdx]: false,
+                                      }));
+                                    }, 200);
+                                  }}
+                                  placeholder="Buscar símbolo (ej: BTC-USD, SPY, GLD)"
+                                  disabled={isSubmitting}
+                                  style={{
+                                    flex: 1,
+                                    padding: "0.75rem 1rem",
+                                    background: "rgba(255, 255, 255, 0.1)",
+                                    color: "white",
+                                    border: "2px solid rgba(59, 130, 246, 0.4)",
+                                    borderRadius: "8px",
+                                    fontSize: "1rem",
+                                    boxSizing: "border-box",
+                                  }}
+                                />
+                                <button
+                                  type="button"
+                                  onClick={() => handleRemovePosition(originalIdx)}
+                                  disabled={isSubmitting}
+                                  style={{
+                                    padding: "0.75rem",
+                                    background: "rgba(239, 68, 68, 0.2)",
+                                    color: "#ef4444",
+                                    border: "1px solid rgba(239, 68, 68, 0.4)",
+                                    borderRadius: "8px",
+                                    cursor: isSubmitting
+                                      ? "not-allowed"
+                                      : "pointer",
+                                    display: "flex",
+                                    alignItems: "center",
+                                    justifyContent: "center",
+                                    flexShrink: 0,
+                                    opacity: isSubmitting ? 0.5 : 1,
+                                    transition: "all 0.2s",
+                                  }}
+                                  onMouseEnter={(e) => {
+                                    if (!isSubmitting) {
+                                      e.currentTarget.style.background =
+                                        "rgba(239, 68, 68, 0.3)";
+                                    }
+                                  }}
+                                  onMouseLeave={(e) => {
+                                    e.currentTarget.style.background =
+                                      "rgba(239, 68, 68, 0.2)";
+                                  }}
+                                  title="Eliminar posición"
+                                >
+                                  <Trash2 size={18} />
+                                </button>
+                              </div>
                               {showDropdown[originalIdx] &&
                                 searchResults[originalIdx] &&
                                 searchResults[originalIdx].length > 0 && (
@@ -790,55 +807,97 @@ export default function ManualUpdate() {
                           {/* Only show quantity input for existing assets */}
                           {pos.assetId && (
                             <>
-                              <NumberInput
-                                step={
-                                  pos.assetSymbol
-                                    ? parseFloat(
-                                        getAssetPrecision(pos.assetSymbol).step
-                                      )
-                                    : 0.0001
-                                }
-                                min={0}
-                                value={parseNumberES(pos.quantity) || 0}
-                                onChange={(val) =>
-                                  handlePositionChange(originalIdx, val)
-                                }
-                                decimals={
-                                  pos.assetSymbol
-                                    ? getAssetPrecision(pos.assetSymbol)
-                                        .decimals
-                                    : 4
-                                }
-                                placeholder="Cantidad"
-                                disabled={
-                                  isSubmitting ||
-                                  (parseNumberES(pos.quantity) || 0) === 0
-                                }
+                              <div
                                 style={{
-                                  width: "100%",
-                                  padding: "0.75rem 1rem",
-                                  background:
-                                    (parseNumberES(pos.quantity) || 0) === 0
-                                      ? "rgba(239, 68, 68, 0.1)"
-                                      : "rgba(255, 255, 255, 0.1)",
-                                  color:
-                                    (parseNumberES(pos.quantity) || 0) === 0
-                                      ? "rgba(255, 255, 255, 0.5)"
-                                      : "white",
-                                  border:
-                                    (parseNumberES(pos.quantity) || 0) === 0
-                                      ? "2px solid rgba(239, 68, 68, 0.4)"
-                                      : "2px solid rgba(255, 255, 255, 0.2)",
-                                  borderRadius: "8px",
-                                  fontSize: "1rem",
-                                  boxSizing: "border-box",
+                                  display: "flex",
+                                  gap: "0.5rem",
+                                  alignItems: "flex-start",
                                   marginBottom: "0.75rem",
-                                  textDecoration:
-                                    (parseNumberES(pos.quantity) || 0) === 0
-                                      ? "line-through"
-                                      : "none",
                                 }}
-                              />
+                              >
+                                <NumberInput
+                                  step={
+                                    pos.assetSymbol
+                                      ? parseFloat(
+                                          getAssetPrecision(pos.assetSymbol).step
+                                        )
+                                      : 0.0001
+                                  }
+                                  min={0}
+                                  value={parseNumberES(pos.quantity) || 0}
+                                  onChange={(val) =>
+                                    handlePositionChange(originalIdx, val)
+                                  }
+                                  decimals={
+                                    pos.assetSymbol
+                                      ? getAssetPrecision(pos.assetSymbol)
+                                          .decimals
+                                      : 4
+                                  }
+                                  placeholder="Cantidad"
+                                  disabled={
+                                    isSubmitting ||
+                                    (parseNumberES(pos.quantity) || 0) === 0
+                                  }
+                                  style={{
+                                    flex: 1,
+                                    padding: "0.75rem 1rem",
+                                    background:
+                                      (parseNumberES(pos.quantity) || 0) === 0
+                                        ? "rgba(239, 68, 68, 0.1)"
+                                        : "rgba(255, 255, 255, 0.1)",
+                                    color:
+                                      (parseNumberES(pos.quantity) || 0) === 0
+                                        ? "rgba(255, 255, 255, 0.5)"
+                                        : "white",
+                                    border:
+                                      (parseNumberES(pos.quantity) || 0) === 0
+                                        ? "2px solid rgba(239, 68, 68, 0.4)"
+                                        : "2px solid rgba(255, 255, 255, 0.2)",
+                                    borderRadius: "8px",
+                                    fontSize: "1rem",
+                                    boxSizing: "border-box",
+                                    textDecoration:
+                                      (parseNumberES(pos.quantity) || 0) === 0
+                                        ? "line-through"
+                                        : "none",
+                                  }}
+                                />
+                                <button
+                                  type="button"
+                                  onClick={() => handleRemovePosition(originalIdx)}
+                                  disabled={isSubmitting}
+                                  style={{
+                                    padding: "0.75rem",
+                                    background: "rgba(239, 68, 68, 0.2)",
+                                    color: "#ef4444",
+                                    border: "1px solid rgba(239, 68, 68, 0.4)",
+                                    borderRadius: "8px",
+                                    cursor: isSubmitting
+                                      ? "not-allowed"
+                                      : "pointer",
+                                    display: "flex",
+                                    alignItems: "center",
+                                    justifyContent: "center",
+                                    flexShrink: 0,
+                                    opacity: isSubmitting ? 0.5 : 1,
+                                    transition: "all 0.2s",
+                                  }}
+                                  onMouseEnter={(e) => {
+                                    if (!isSubmitting) {
+                                      e.currentTarget.style.background =
+                                        "rgba(239, 68, 68, 0.3)";
+                                    }
+                                  }}
+                                  onMouseLeave={(e) => {
+                                    e.currentTarget.style.background =
+                                      "rgba(239, 68, 68, 0.2)";
+                                  }}
+                                  title="Eliminar posición"
+                                >
+                                  <Trash2 size={18} />
+                                </button>
+                              </div>
                               {(parseNumberES(pos.quantity) || 0) === 0 && (
                                 <p
                                   style={{

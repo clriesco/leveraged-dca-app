@@ -151,9 +151,37 @@ export default function Contribution() {
     <>
       <Head>
         <title>Aportación Mensual - Leveraged DCA App</title>
+        <style dangerouslySetInnerHTML={{__html: `
+          @media (max-width: 768px) {
+            .contribution-wrapper {
+              padding: 1rem !important;
+              padding-top: 4rem !important;
+            }
+            .contribution-input {
+              font-size: 1.125rem !important;
+              padding: 0.875rem 1rem !important;
+            }
+            .submit-button {
+              padding: 0.875rem !important;
+              font-size: 0.95rem !important;
+            }
+          }
+          @media (max-width: 480px) {
+            .contribution-wrapper {
+              padding: 0.75rem !important;
+              padding-top: 4rem !important;
+            }
+          }
+        `}} />
       </Head>
       <DashboardSidebar portfolioId={portfolioId}>
-        <div style={{ padding: "2rem" }}>
+        <div
+          style={{
+            padding: "2rem",
+            paddingTop: "4rem",
+          }}
+          className="contribution-wrapper"
+        >
           <div style={{ maxWidth: "1200px", margin: "0 auto" }}>
             {/* Header */}
             <div
@@ -220,6 +248,7 @@ export default function Contribution() {
                       fontSize: "1.25rem",
                       boxSizing: "border-box",
                     }}
+                    className="contribution-input"
                   />
                 </div>
 
@@ -269,7 +298,9 @@ export default function Contribution() {
                     opacity: isSubmitting || !portfolioId ? 0.7 : 1,
                     cursor:
                       isSubmitting || !portfolioId ? "not-allowed" : "pointer",
+                    minHeight: "48px",
                   }}
+                  className="submit-button"
                 >
                   {isSubmitting ? "Guardando..." : "Registrar Aportación"}
                 </button>
