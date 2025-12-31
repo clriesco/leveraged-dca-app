@@ -4,13 +4,36 @@ import { PrismaService } from "../prisma/prisma.service";
 
 /**
  * Service that executes cron job scripts
- * Imports and runs the logic from infra/scripts
+ * Uses ts-node to execute TypeScript files from infra/scripts at runtime
  */
 @Injectable()
 export class CronService {
   private readonly logger = new Logger(CronService.name);
+  private tsNodeRegistered = false;
 
   constructor(private readonly prismaService: PrismaService) {}
+
+  /**
+   * Register ts-node to enable TypeScript execution at runtime
+   * This allows us to require .ts files directly without compilation
+   */
+  private registerTsNode(): void {
+    if (this.tsNodeRegistered) {
+      return;
+    }
+
+    try {
+      // Register ts-node to handle .ts files in require()
+      require("ts-node/register");
+      this.tsNodeRegistered = true;
+      this.logger.debug("ts-node registered for runtime TypeScript execution");
+    } catch (error) {
+      this.logger.warn(
+        "ts-node not available, falling back to compiled JS files",
+        error
+      );
+    }
+  }
 
   /**
    * Execute price ingestion job
@@ -20,7 +43,10 @@ export class CronService {
     this.logger.log("🔄 Starting price ingestion...");
 
     try {
-      // Import the ingestion logic dynamically using require to avoid TypeScript compilation issues
+      this.registerTsNode();
+
+      // Import the ingestion logic dynamically
+      // Using require() with ts-node allows TypeScript files to be executed at runtime
       const priceIngestionModule = require("../../../../infra/scripts/price-ingestion");
 
       // The script creates its own PrismaClient, but we can still use it
@@ -46,7 +72,9 @@ export class CronService {
     this.logger.log("🔄 Starting metrics refresh...");
 
     try {
-      // Import the refresh logic dynamically using require to avoid TypeScript compilation issues
+      this.registerTsNode();
+
+      // Import the refresh logic dynamically
       const metricsRefreshModule = require("../../../../infra/scripts/metrics-refresh");
 
       await metricsRefreshModule.refreshMetrics();
@@ -70,7 +98,9 @@ export class CronService {
     this.logger.log("🔍 Starting daily check...");
 
     try {
-      // Import the daily check logic dynamically using require to avoid TypeScript compilation issues
+      this.registerTsNode();
+
+      // Import the daily check logic dynamically
       const dailyCheckModule = require("../../../../infra/scripts/daily-check");
 
       const result = await dailyCheckModule.runDailyCheck();

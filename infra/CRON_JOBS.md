@@ -39,98 +39,126 @@ npm run metrics:refresh
 npm run daily:check
 ```
 
-## Configuration: GitHub Actions (Current Implementation)
+## Configuration Options
 
-The application uses GitHub Actions to run scheduled jobs. This approach is free and keeps the Render.com service awake.
-
-### Setup
-
-Two workflows are configured:
-
-1. **Keep Alive** (`.github/workflows/keep-alive.yml`) - Pings `/api/health` every 10 minutes to prevent Render.com from sleeping
-2. **Daily Jobs** (`.github/workflows/daily-jobs.yml`) - Runs the three scheduled jobs at their designated times
-
-### Required GitHub Secrets
-
-Configure the following secrets in your GitHub repository settings:
-
-1. **`BACKEND_URL`** - The full URL of your backend service (e.g., `https://your-app.onrender.com`)
-2. **`CRON_SECRET_TOKEN`** - Secret token to authenticate cron job requests (must match `CRON_SECRET_TOKEN` in backend environment)
-
-To add secrets:
-1. Go to your repository on GitHub
-2. Navigate to **Settings** → **Secrets and variables** → **Actions**
-3. Click **New repository secret**
-4. Add each secret with its value
-
-### Required Backend Environment Variables
-
-In your Render.com backend service, configure:
-
-1. **`CRON_SECRET_TOKEN`** - Secret token for authenticating cron requests (generate a strong random string)
-
-**Note:** The `CRON_SECRET_TOKEN` must be the same value in both GitHub Secrets and Render environment variables.
-
-### Keep Alive Workflow
-
-The keep-alive workflow runs every 10 minutes and pings the `/api/health` endpoint to prevent Render.com from putting the service to sleep (important for free tier).
-
-**Schedule:** Every 10 minutes (`*/10 * * * *`)
-
-**Manual trigger:** Available via GitHub Actions UI
-
-### Daily Jobs Workflow
-
-The daily jobs workflow calls backend endpoints every 30 minutes in sequence:
-
-1. **Price Ingestion** - Calls `/api/cron/price-ingestion` to fetch latest prices from Yahoo Finance
-2. **Metrics Refresh** - Calls `/api/cron/metrics-refresh` to recalculate portfolio metrics (runs after price ingestion)
-3. **Daily Check** - Calls `/api/cron/daily-check` to generate recommendations and alerts (runs after metrics refresh)
-
-**Schedule:** Every 30 minutes (`*/30 * * * *`)
-
-**Execution order:** Jobs run sequentially (price-ingestion → metrics-refresh → daily-check) to ensure data consistency.
-
-**Architecture:** GitHub Actions makes HTTP requests to backend endpoints. The backend executes the scripts internally, which is:
-- Faster (no dependency installation needed)
-- More secure (secrets stay in Render)
-- Simpler (no Prisma Client generation issues)
-
-**Manual trigger:** Available via GitHub Actions UI with job selection:
-- `all` - Run all three jobs in sequence
-- `prices` - Run only price ingestion
-- `metrics` - Run only metrics refresh
-- `daily-check` - Run only daily check
-
-### Workflow Files
-
-- `.github/workflows/keep-alive.yml` - Health check ping
-- `.github/workflows/daily-jobs.yml` - Scheduled daily jobs
-
-### Alternative Options (Not Currently Used)
-
-<details>
-<summary>Click to expand alternative configuration options</summary>
-
-#### Option 1: Supabase Cron Jobs
+### Option 1: Supabase Cron Jobs (Recommended)
 
 Supabase supports PostgreSQL cron jobs via the `pg_cron` extension.
 
-#### Option 2: Render Cron Jobs
+#### Setup
 
-If your backend is hosted on Render, you can use Render's built-in cron jobs feature (requires paid plan).
+1. Enable `pg_cron` extension in Supabase:
+   ```sql
+   -- Run in Supabase SQL Editor
+   CREATE EXTENSION IF NOT EXISTS pg_cron;
+   ```
 
-#### Option 3: Railway Cron Jobs
+2. Create a function to run the scripts:
+   ```sql
+   -- Note: This requires setting up a way to execute Node.js scripts
+   -- You may need to use a webhook or external service
+   ```
 
-If using Railway, you can create a separate service for cron jobs.
+#### Alternative: Use Supabase Edge Functions
 
-#### Option 4: External Cron Service
+Create Edge Functions that call your scripts via HTTP:
+
+```typescript
+// supabase/functions/price-ingestion/index.ts
+import { serve } from "https://deno.land/std@0.168.0/http/server.ts"
+
+serve(async (req) => {
+  // Call your script endpoint or execute directly
+  // ...
+})
+```
+
+### Option 2: Render Cron Jobs
+
+If your backend is hosted on Render:
+
+1. Go to your Render dashboard
+2. Navigate to your backend service
+3. Go to "Cron Jobs" section
+4. Add three cron jobs:
+
+**Job 1: Price Ingestion**
+- Schedule: `0 6 * * *`
+- Command: `cd infra/scripts && npm run prices:ingest`
+
+**Job 2: Metrics Refresh**
+- Schedule: `0 7 * * *`
+- Command: `cd infra/scripts && npm run metrics:refresh`
+
+**Job 3: Daily Check**
+- Schedule: `0 9 * * *`
+- Command: `cd infra/scripts && npm run daily:check`
+
+### Option 3: Railway Cron Jobs
+
+If using Railway:
+
+1. Create a separate service for cron jobs
+2. Use Railway's cron job feature
+3. Configure each job with the appropriate schedule
+
+### Option 4: External Cron Service
 
 Use services like:
 - **Cron-job.org** - Free web-based cron service
 - **EasyCron** - Reliable cron service
+- **GitHub Actions** - Schedule workflows (free for public repos)
 
-</details>
+Example GitHub Actions workflow:
+
+```yaml
+# .github/workflows/daily-jobs.yml
+name: Daily Jobs
+
+on:
+  schedule:
+    - cron: '0 6 * * *'  # Price ingestion
+    - cron: '0 7 * * *'  # Metrics refresh
+    - cron: '0 9 * * *'  # Daily check
+  workflow_dispatch:  # Allow manual trigger
+
+jobs:
+  price-ingestion:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v3
+      - uses: actions/setup-node@v3
+        with:
+          node-version: '18'
+      - run: cd infra/scripts && npm install
+      - run: npm run prices:ingest
+        env:
+          DATABASE_URL: ${{ secrets.DATABASE_URL }}
+
+  metrics-refresh:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v3
+      - uses: actions/setup-node@v3
+        with:
+          node-version: '18'
+      - run: cd infra/scripts && npm install
+      - run: npm run metrics:refresh
+        env:
+          DATABASE_URL: ${{ secrets.DATABASE_URL }}
+
+  daily-check:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v3
+      - uses: actions/setup-node@v3
+        with:
+          node-version: '18'
+      - run: cd infra/scripts && npm install
+      - run: npm run daily:check
+        env:
+          DATABASE_URL: ${{ secrets.DATABASE_URL }}
+```
 
 ## Environment Variables
 
@@ -199,32 +227,16 @@ Consider setting up alerts for:
 
 ## Next Steps
 
-1. ✅ Configure GitHub secrets (`BACKEND_URL` and `DATABASE_URL`)
-2. ✅ Verify workflows are enabled in GitHub Actions
-3. Test each job manually using workflow_dispatch
-4. Monitor logs in GitHub Actions for the first few days
-5. Set up alerts for workflow failures (GitHub notifications)
-
-## Monitoring
-
-### GitHub Actions
-
-Monitor job execution in:
-- **Actions** tab in your GitHub repository
-- Check workflow runs for success/failure
-- Review logs for each job execution
-
-### Health Check
-
-The keep-alive workflow will log:
-- ✅ Success: Health check successful (HTTP 200)
-- ⚠️ Warning: Health check returned non-200 status
-- ❌ Error: Connection failed
+1. Choose a cron job solution (recommended: Render or GitHub Actions)
+2. Configure the three jobs with the recommended schedule
+3. Test each job manually
+4. Monitor logs for the first few days
+5. Set up alerts for failures
 
 ---
 
-**Last updated:** January 2025  
-**Status:** ✅ Configured with GitHub Actions
+**Last updated:** December 2024  
+**Status:** Ready for production configuration
 
 
 

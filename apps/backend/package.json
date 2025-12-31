@@ -26,7 +26,8 @@
     "dotenv": "^16.4.5",
     "jsonwebtoken": "^9.0.3",
     "reflect-metadata": "^0.1.13",
-    "rxjs": "^7.8.0"
+    "rxjs": "^7.8.0",
+    "ts-node": "^10.9.2"
   },
   "devDependencies": {
     "@nestjs/cli": "^10.2.0",
