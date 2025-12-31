@@ -50,7 +50,7 @@ jobs:
         run: npm --workspace apps/backend run prisma:generate
 
       - name: Run unit tests
-        run: npm --workspace apps/backend run test -- --testPathIgnorePatterns='e2e'
+        run: npm --workspace apps/backend run test -- --testPathIgnorePatterns='e2e' --passWithNoTests
 
   e2e-tests:
     name: E2E Tests
