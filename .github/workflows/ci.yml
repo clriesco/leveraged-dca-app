@@ -21,7 +21,13 @@ jobs:
           cache: 'npm'
 
       - name: Install dependencies
-        run: npm install
+        run: npm ci
+
+      - name: Install backend dependencies
+        run: npm --workspace apps/backend ci
+
+      - name: Generate Prisma Client
+        run: npm --workspace apps/backend run prisma:generate
 
       - name: Lint
         run: npm run lint
