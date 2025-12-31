@@ -409,7 +409,15 @@ export default function Onboarding() {
         <div style={cardStyle}>
           {/* Header */}
           <div style={{ textAlign: "center", marginBottom: "2rem" }}>
-            <h1 style={{ ...titleStyle, display: "flex", alignItems: "center", justifyContent: "center", gap: "0.5rem" }}>
+            <h1
+              style={{
+                ...titleStyle,
+                display: "flex",
+                alignItems: "center",
+                justifyContent: "center",
+                gap: "0.5rem",
+              }}
+            >
               <Rocket size={28} />
               Configura tu Portfolio
             </h1>
@@ -756,7 +764,15 @@ export default function Onboarding() {
                       style={{ accentColor: "#3b82f6" }}
                     />
                     <div style={{ marginLeft: "0.75rem" }}>
-                      <div style={{ display: "flex", alignItems: "center", gap: "0.5rem", fontWeight: "600", color: "#f1f5f9" }}>
+                      <div
+                        style={{
+                          display: "flex",
+                          alignItems: "center",
+                          gap: "0.5rem",
+                          fontWeight: "600",
+                          color: "#f1f5f9",
+                        }}
+                      >
                         <TrendingUp size={16} />
                         Optimización Sharpe
                       </div>
@@ -793,7 +809,13 @@ export default function Onboarding() {
                     />
                     <div style={{ marginLeft: "0.75rem" }}>
                       <div style={{ fontWeight: "600", color: "#f1f5f9" }}>
-                        <div style={{ display: "flex", alignItems: "center", gap: "0.5rem" }}>
+                        <div
+                          style={{
+                            display: "flex",
+                            alignItems: "center",
+                            gap: "0.5rem",
+                          }}
+                        >
                           <Scale size={16} />
                           Pesos Iguales
                         </div>
@@ -809,7 +831,8 @@ export default function Onboarding() {
                         {formatNumberES(100 / assets.length, {
                           minimumFractionDigits: 1,
                           maximumFractionDigits: 1,
-                        })}% cada uno)
+                        })}
+                        % cada uno)
                       </div>
                     </div>
                   </label>
@@ -834,7 +857,13 @@ export default function Onboarding() {
                     />
                     <div style={{ marginLeft: "0.75rem" }}>
                       <div style={{ fontWeight: "600", color: "#f1f5f9" }}>
-                        <div style={{ display: "flex", alignItems: "center", gap: "0.5rem" }}>
+                        <div
+                          style={{
+                            display: "flex",
+                            alignItems: "center",
+                            gap: "0.5rem",
+                          }}
+                        >
                           <Edit size={16} />
                           Asignación Manual
                         </div>
@@ -973,9 +1002,9 @@ export default function Onboarding() {
                     >
                       {weightMethod === "sharpe"
                         ? "Los pesos se calcularán automáticamente basándose en el histórico de precios cuando realices un rebalance."
-                        : `Cada activo tendrá un peso igual de ${(
+                        : `Cada activo tendrá un peso igual de ${
                             100 / assets.length
-                          )}%.`}
+                          }%.`}
                     </p>
                   </div>
                 )}
@@ -999,7 +1028,14 @@ export default function Onboarding() {
 
                 {/* Leverage */}
                 <div style={sectionStyle}>
-                  <h3 style={{ ...sectionTitleStyle, display: "flex", alignItems: "center", gap: "0.5rem" }}>
+                  <h3
+                    style={{
+                      ...sectionTitleStyle,
+                      display: "flex",
+                      alignItems: "center",
+                      gap: "0.5rem",
+                    }}
+                  >
                     <BarChart size={18} />
                     Rango de Leverage
                   </h3>
@@ -1021,7 +1057,9 @@ export default function Onboarding() {
                       >
                         <NumberInput
                           value={leverageMin}
-                          onChange={(val) => setLeverageMin(isNaN(val) ? 1 : val)}
+                          onChange={(val) =>
+                            setLeverageMin(isNaN(val) ? 1 : val)
+                          }
                           min={1}
                           max={10}
                           step={0.1}
@@ -1042,7 +1080,9 @@ export default function Onboarding() {
                       >
                         <NumberInput
                           value={leverageMax}
-                          onChange={(val) => setLeverageMax(isNaN(val) ? 1 : val)}
+                          onChange={(val) =>
+                            setLeverageMax(isNaN(val) ? 1 : val)
+                          }
                           min={1}
                           max={10}
                           step={0.1}
@@ -1063,7 +1103,9 @@ export default function Onboarding() {
                       >
                         <NumberInput
                           value={leverageTarget}
-                          onChange={(val) => setLeverageTarget(isNaN(val) ? 1 : val)}
+                          onChange={(val) =>
+                            setLeverageTarget(isNaN(val) ? 1 : val)
+                          }
                           min={1}
                           max={10}
                           step={0.1}
@@ -1078,7 +1120,14 @@ export default function Onboarding() {
 
                 {/* Contributions */}
                 <div style={sectionStyle}>
-                  <h3 style={{ ...sectionTitleStyle, display: "flex", alignItems: "center", gap: "0.5rem" }}>
+                  <h3
+                    style={{
+                      ...sectionTitleStyle,
+                      display: "flex",
+                      alignItems: "center",
+                      gap: "0.5rem",
+                    }}
+                  >
                     <DollarSign size={18} />
                     Aportaciones Periódicas
                   </h3>
@@ -1158,8 +1207,6 @@ export default function Onboarding() {
                           max={31}
                           decimals={0}
                           style={inputStyle}
-                          min={1}
-                          max={31}
                         />
                       )}
                     </div>
@@ -1256,19 +1303,37 @@ export default function Onboarding() {
                     </h4>
                     <p style={{ color: "#f1f5f9", margin: 0 }}>
                       {weightMethod === "sharpe" && (
-                        <div style={{ display: "flex", alignItems: "center", gap: "0.5rem" }}>
+                        <div
+                          style={{
+                            display: "flex",
+                            alignItems: "center",
+                            gap: "0.5rem",
+                          }}
+                        >
                           <TrendingUp size={16} />
                           Optimización Sharpe (automático)
                         </div>
                       )}
                       {weightMethod === "equal" && (
-                        <div style={{ display: "flex", alignItems: "center", gap: "0.5rem" }}>
+                        <div
+                          style={{
+                            display: "flex",
+                            alignItems: "center",
+                            gap: "0.5rem",
+                          }}
+                        >
                           <Scale size={16} />
                           Pesos Iguales
                         </div>
                       )}
                       {weightMethod === "manual" && (
-                        <div style={{ display: "flex", alignItems: "center", gap: "0.5rem" }}>
+                        <div
+                          style={{
+                            display: "flex",
+                            alignItems: "center",
+                            gap: "0.5rem",
+                          }}
+                        >
                           <Edit size={16} />
                           Asignación Manual
                         </div>
@@ -1422,7 +1487,13 @@ export default function Onboarding() {
               )}
               {currentStep === totalSteps && !isSubmitting && (
                 <button onClick={handleSubmit} style={submitButtonStyle}>
-                  <div style={{ display: "flex", alignItems: "center", gap: "0.5rem" }}>
+                  <div
+                    style={{
+                      display: "flex",
+                      alignItems: "center",
+                      gap: "0.5rem",
+                    }}
+                  >
                     <Rocket size={18} />
                     Crear Portfolio
                   </div>
