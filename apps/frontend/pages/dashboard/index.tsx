@@ -10,6 +10,24 @@ import {
   usePortfolioMetrics,
   usePortfolioRecommendations,
 } from "../../lib/hooks/use-portfolio-data";
+import { getProfile, UserProfile } from "../../lib/api";
+import {
+  Target,
+  TrendingUp,
+  TrendingDown,
+  Rocket,
+  Scale,
+  Check,
+  DollarSign,
+  Edit,
+  Calendar,
+  BarChart,
+} from "lucide-react";
+import {
+  formatCurrencyES,
+  formatPercentES,
+  formatNumberES,
+} from "../../lib/number-format";
 
 interface Position {
   id: string;
@@ -115,6 +133,7 @@ function Dashboard() {
 
   const [historyPage, setHistoryPage] = useState(1);
   const itemsPerPage = 24;
+  const [userProfile, setUserProfile] = useState<UserProfile | null>(null);
 
   // Combined loading state
   const dataLoading =
@@ -161,6 +180,21 @@ function Dashboard() {
       router.push("/dashboard/onboarding");
     }
   }, [portfoliosLoading, portfolios.length, user, router]);
+
+  // Load user profile
+  useEffect(() => {
+    async function loadProfile() {
+      if (!user) return;
+      try {
+        const profile = await getProfile();
+        setUserProfile(profile);
+      } catch (error) {
+        console.error("Error loading profile:", error);
+        // Don't show error, just fall back to email
+      }
+    }
+    loadProfile();
+  }, [user]);
 
   // Early returns after all hooks
   if (loading) {
@@ -242,10 +276,12 @@ function Dashboard() {
                     letterSpacing: "-0.025em",
                   }}
                 >
-                  Dashboard del Portfolio
+                  Mi portfolio
                 </h1>
                 <p style={{ color: "#94a3b8", fontSize: "0.875rem" }}>
-                  {user.email}
+                  {userProfile?.fullName && userProfile.fullName.trim() !== ""
+                    ? userProfile.fullName
+                    : user.email}
                 </p>
               </div>
             </div>
@@ -589,35 +625,27 @@ function Dashboard() {
                 >
                   <MetricCard
                     title="Equity"
-                    value={`$${summary.metrics.equity.toLocaleString(
-                      undefined,
-                      {
-                        maximumFractionDigits: 0,
-                      }
-                    )}`}
+                    value={formatCurrencyES(summary.metrics.equity)}
                     subtitle="Valor del portfolio"
                   />
                   <MetricCard
                     title="Exposición"
-                    value={`$${summary.metrics.exposure.toLocaleString(
-                      undefined,
-                      { maximumFractionDigits: 0 }
-                    )}`}
+                    value={formatCurrencyES(summary.metrics.exposure)}
                     subtitle="Total de posiciones"
                   />
                   <MetricCard
                     title="Leverage"
-                    value={`${summary.metrics.leverage.toFixed(1)}x`}
+                    value={`${formatNumberES(summary.metrics.leverage, {
+                      minimumFractionDigits: 1,
+                      maximumFractionDigits: 1,
+                    })}x`}
                     subtitle="Ratio actual"
                   />
                   <MetricCard
                     title="Retornos"
-                    value={`${
-                      summary.metrics.percentReturn >= 0 ? "+" : ""
-                    }${summary.metrics.percentReturn.toFixed(2)}%`}
-                    subtitle={`$${summary.metrics.absoluteReturn.toLocaleString(
-                      undefined,
-                      { maximumFractionDigits: 0 }
+                    value={formatPercentES(summary.metrics.percentReturn / 100)}
+                    subtitle={`${formatCurrencyES(
+                      summary.metrics.absoluteReturn
                     )} total`}
                     positive={summary.metrics.percentReturn >= 0}
                   />
@@ -643,7 +671,16 @@ function Dashboard() {
                           marginBottom: "1.25rem",
                         }}
                       >
-                        🎯 Recomendaciones
+                        <div
+                          style={{
+                            display: "flex",
+                            alignItems: "center",
+                            gap: "0.5rem",
+                          }}
+                        >
+                          <Target size={20} />
+                          Recomendaciones
+                        </div>
                       </h2>
 
                       <div
@@ -684,7 +721,16 @@ function Dashboard() {
                         marginBottom: "1rem",
                       }}
                     >
-                      📈 Métricas
+                      <div
+                        style={{
+                          display: "flex",
+                          alignItems: "center",
+                          gap: "0.5rem",
+                        }}
+                      >
+                        <BarChart size={20} />
+                        Métricas
+                      </div>
                     </h2>
                     <div
                       style={{
@@ -697,25 +743,27 @@ function Dashboard() {
                       {[
                         {
                           label: "Capital final",
-                          value: formatCurrency(analyticsStats.capitalFinal),
+                          value: formatCurrencyES(analyticsStats.capitalFinal),
                           description:
                             "Valor total del equity al final del período analizado.",
                         },
                         {
                           label: "Total invertido",
-                          value: formatCurrency(analyticsStats.totalInvested),
+                          value: formatCurrencyES(analyticsStats.totalInvested),
                           description:
                             "Suma del capital inicial más todas las aportaciones realizadas durante el período.",
                         },
                         {
                           label: "Retorno absoluto",
-                          value: formatCurrency(analyticsStats.absoluteReturn),
+                          value: formatCurrencyES(
+                            analyticsStats.absoluteReturn
+                          ),
                           description:
                             "Diferencia entre el capital final y el total invertido. Mide la ganancia o pérdida en términos absolutos.",
                         },
                         {
                           label: "Retorno total",
-                          value: formatPercent(
+                          value: formatPercentES(
                             analyticsStats.totalReturnPercent / 100
                           ),
                           description:
@@ -723,25 +771,28 @@ function Dashboard() {
                         },
                         {
                           label: "CAGR",
-                          value: formatPercent(analyticsStats.cagr),
+                          value: formatPercentES(analyticsStats.cagr),
                           description:
                             "Tasa de crecimiento anual compuesta. Mide el retorno anualizado del portfolio desde el inicio.",
                         },
                         {
                           label: "Volatilidad anual",
-                          value: formatPercent(analyticsStats.volatility),
+                          value: formatPercentES(analyticsStats.volatility),
                           description:
                             "Desviación estándar anualizada de los retornos diarios. Mide la variabilidad del portfolio.",
                         },
                         {
                           label: "Sharpe Ratio",
-                          value: analyticsStats.sharpe.toFixed(2),
+                          value: formatNumberES(analyticsStats.sharpe, {
+                            minimumFractionDigits: 2,
+                            maximumFractionDigits: 2,
+                          }),
                           description:
                             "Relación entre el retorno excedente (sobre la tasa libre de riesgo) y la volatilidad. Valores más altos indican mejor relación riesgo-retorno.",
                         },
                         {
                           label: "Máximo Drawdown Equity",
-                          value: formatPercent(
+                          value: formatPercentES(
                             Math.abs(analyticsStats.maxDrawdownEquity)
                           ),
                           description:
@@ -749,7 +800,7 @@ function Dashboard() {
                         },
                         {
                           label: "Máximo Drawdown Exposure",
-                          value: formatPercent(
+                          value: formatPercentES(
                             Math.abs(analyticsStats.maxDrawdownExposure)
                           ),
                           description:
@@ -766,7 +817,7 @@ function Dashboard() {
                           value: analyticsStats.bestDay
                             ? `${new Date(
                                 analyticsStats.bestDay.date
-                              ).toLocaleDateString()} (${formatPercent(
+                              ).toLocaleDateString("es-ES")} (${formatPercentES(
                                 analyticsStats.bestDay.return
                               )})`
                             : "-",
@@ -778,7 +829,7 @@ function Dashboard() {
                           value: analyticsStats.worstDay
                             ? `${new Date(
                                 analyticsStats.worstDay.date
-                              ).toLocaleDateString()} (${formatPercent(
+                              ).toLocaleDateString("es-ES")} (${formatPercentES(
                                 analyticsStats.worstDay.return
                               )})`
                             : "-",
@@ -867,13 +918,7 @@ function Dashboard() {
                           fontWeight: "600",
                         }}
                       >
-                        $
-                        {summary.metrics.totalContributions.toLocaleString(
-                          undefined,
-                          {
-                            maximumFractionDigits: 0,
-                          }
-                        )}
+                        {formatCurrencyES(summary.metrics.totalContributions)}
                       </p>
                     </div>
                     <div>
@@ -974,7 +1019,7 @@ function Dashboard() {
                           >
                             <td style={tableCellStyle}>
                               {new Date(point.date).toLocaleDateString(
-                                "en-US",
+                                "es-ES",
                                 {
                                   month: "short",
                                   year: "numeric",
@@ -982,13 +1027,17 @@ function Dashboard() {
                               )}
                             </td>
                             <td style={tableCellStyle}>
-                              ${Math.round(point.equity).toLocaleString()}
+                              {formatCurrencyES(Math.round(point.equity))}
                             </td>
                             <td style={tableCellStyle}>
-                              ${Math.round(point.exposure).toLocaleString()}
+                              {formatCurrencyES(Math.round(point.exposure))}
                             </td>
                             <td style={tableCellStyle}>
-                              {point.leverage.toFixed(2)}x
+                              {formatNumberES(point.leverage, {
+                                minimumFractionDigits: 2,
+                                maximumFractionDigits: 2,
+                              })}
+                              x
                             </td>
                             <td style={tableCellStyle}>
                               {point.composition.length > 0 ? (
@@ -1012,7 +1061,11 @@ function Dashboard() {
                                       }}
                                     >
                                       {asset.symbol}{" "}
-                                      {(asset.weight * 100).toFixed(1)}%
+                                      {formatNumberES(asset.weight * 100, {
+                                        minimumFractionDigits: 1,
+                                        maximumFractionDigits: 1,
+                                      })}
+                                      %
                                     </span>
                                   ))}
                                 </div>
@@ -1034,10 +1087,7 @@ function Dashboard() {
                                   (point.pnl ?? 0) >= 0 ? "#22c55e" : "#f87171",
                               }}
                             >
-                              $
-                              {(point.pnl ?? 0).toLocaleString(undefined, {
-                                maximumFractionDigits: 0,
-                              })}
+                              {formatCurrencyES(point.pnl ?? 0)}
                             </td>
                           </tr>
                         ))}
@@ -1174,7 +1224,7 @@ function Dashboard() {
                             "rgba(59, 130, 246, 0.1)";
                         }}
                       >
-                        <span>✏️</span>
+                        <Edit size={18} />
                         <span>Actualización Manual</span>
                       </button>
                       <button
@@ -1205,7 +1255,7 @@ function Dashboard() {
                             "rgba(139, 92, 246, 0.1)";
                         }}
                       >
-                        <span>⚖️</span>
+                        <Scale size={18} />
                         <span>Rebalancear Portfolio</span>
                       </button>
                     </div>
@@ -1247,32 +1297,32 @@ function Dashboard() {
                               </div>
                             </td>
                             <td style={tableCellStyle}>
-                              {pos.weight.toFixed(1)}%
+                              {formatNumberES(pos.weight * 100, {
+                                minimumFractionDigits: 1,
+                                maximumFractionDigits: 1,
+                              })}
+                              %
                             </td>
                             <td style={tableCellStyle}>
-                              {pos.quantity.toLocaleString(undefined, {
+                              {formatNumberES(pos.quantity, {
+                                minimumFractionDigits: 0,
                                 maximumFractionDigits: 4,
                               })}
                             </td>
                             <td style={tableCellStyle}>
-                              $
-                              {pos.avgPrice.toLocaleString(undefined, {
+                              {formatCurrencyES(pos.avgPrice, {
                                 minimumFractionDigits: 2,
                                 maximumFractionDigits: 2,
                               })}
                             </td>
                             <td style={tableCellStyle}>
-                              $
-                              {pos.currentPrice.toLocaleString(undefined, {
+                              {formatCurrencyES(pos.currentPrice, {
                                 minimumFractionDigits: 2,
                                 maximumFractionDigits: 2,
                               })}
                             </td>
                             <td style={tableCellStyle}>
-                              $
-                              {pos.exposureUsd.toLocaleString(undefined, {
-                                maximumFractionDigits: 0,
-                              })}
+                              {formatCurrencyES(pos.exposureUsd)}
                             </td>
                             <td
                               style={{
@@ -1282,10 +1332,8 @@ function Dashboard() {
                               }}
                             >
                               <div>
-                                {pos.pnl >= 0 ? "+" : ""}$
-                                {pos.pnl.toLocaleString(undefined, {
-                                  maximumFractionDigits: 0,
-                                })}
+                                {pos.pnl >= 0 ? "+" : ""}
+                                {formatCurrencyES(pos.pnl)}
                               </div>
                               <div
                                 style={{
@@ -1293,8 +1341,7 @@ function Dashboard() {
                                   opacity: 0.8,
                                 }}
                               >
-                                {pos.pnlPercent >= 0 ? "+" : ""}
-                                {pos.pnlPercent.toFixed(2)}%
+                                {formatPercentES(pos.pnlPercent / 100)}
                               </div>
                             </td>
                           </tr>
@@ -1433,7 +1480,10 @@ function EquityChart({ data }: { data: MetricsPoint[] }) {
             textAnchor="end"
             alignmentBaseline="middle"
           >
-            ${((minEquity + pct * range) / 1000).toFixed(0)}k
+            {formatNumberES((minEquity + pct * range) / 1000, {
+              maximumFractionDigits: 0,
+            })}
+            k
           </text>
         ))}
 
@@ -1464,7 +1514,7 @@ function EquityChart({ data }: { data: MetricsPoint[] }) {
               idx === 0 ? "start" : idx === data.length - 1 ? "end" : "middle"
             }
           >
-            {new Date(data[idx].date).toLocaleDateString("en-US", {
+            {new Date(data[idx].date).toLocaleDateString("es-ES", {
               month: "short",
               year: "2-digit",
             })}
@@ -1511,17 +1561,14 @@ function EquityChart({ data }: { data: MetricsPoint[] }) {
           }}
         >
           <p style={{ margin: 0, fontWeight: "600" }}>
-            {new Date(tooltip.point.date).toLocaleDateString("en-US", {
+            {new Date(tooltip.point.date).toLocaleDateString("es-ES", {
               month: "short",
               day: "numeric",
               year: "numeric",
             })}
           </p>
           <p style={{ margin: "0.25rem 0 0", color: "#a5b4fc" }}>
-            Equity: $
-            {tooltip.point.equity.toLocaleString(undefined, {
-              maximumFractionDigits: 0,
-            })}
+            Equity: {formatCurrencyES(tooltip.point.equity)}
           </p>
         </div>
       )}
@@ -1647,17 +1694,7 @@ function AnalyticsCard({
   );
 }
 
-function formatCurrency(value: number) {
-  if (!Number.isFinite(value)) return "-";
-  return `$${Math.round(value).toLocaleString(undefined, {
-    maximumFractionDigits: 0,
-  })}`;
-}
-
-function formatPercent(value: number) {
-  if (!Number.isFinite(value)) return "-";
-  return `${value >= 0 ? "+" : ""}${(value * 100).toFixed(2)}%`;
-}
+// Format functions are now imported from lib/number-format.ts
 
 /**
  * Metric card component
@@ -1766,13 +1803,16 @@ const PRIORITY_CONFIG: Record<
 /**
  * Type icons for recommendations
  */
-const TYPE_ICONS: Record<string, string> = {
-  contribution_due: "📅",
-  leverage_low: "📉",
-  leverage_high: "📈",
-  deploy_signal: "🚀",
-  rebalance_needed: "⚖️",
-  in_range: "✅",
+const TYPE_ICONS: Record<
+  string,
+  React.ComponentType<{ size?: number; color?: string }>
+> = {
+  contribution_due: Calendar,
+  leverage_low: TrendingDown,
+  leverage_high: TrendingUp,
+  deploy_signal: Rocket,
+  rebalance_needed: Scale,
+  in_range: Check,
 };
 
 /**
@@ -1788,7 +1828,7 @@ function DashboardRecommendationCard({
   portfolioId: string | null;
 }) {
   const priorityConfig = PRIORITY_CONFIG[recommendation.priority];
-  const icon = TYPE_ICONS[recommendation.type] || "📌";
+  const IconComponent = TYPE_ICONS[recommendation.type] || Target;
 
   return (
     <div
@@ -1809,7 +1849,7 @@ function DashboardRecommendationCard({
         }}
       >
         <div style={{ display: "flex", alignItems: "center", gap: "0.75rem" }}>
-          <span style={{ fontSize: "1.5rem" }}>{icon}</span>
+          <IconComponent size={24} color={priorityConfig.color} />
           <div>
             <h3
               style={{
@@ -1871,13 +1911,10 @@ function DashboardRecommendationCard({
                 fontWeight: "600",
               }}
             >
-              Total: $
-              {recommendation.actions.totalPurchaseValue?.toLocaleString(
-                undefined,
-                {
-                  maximumFractionDigits: 0,
-                }
-              ) || 0}
+              Total:{" "}
+              {recommendation.actions.totalPurchaseValue
+                ? formatCurrencyES(recommendation.actions.totalPurchaseValue)
+                : formatCurrencyES(0)}
             </p>
           </div>
         )}
@@ -1900,7 +1937,12 @@ function DashboardRecommendationCard({
               marginBottom: "0.25rem",
             }}
           >
-            💸 Aporte Extra Necesario
+            <div
+              style={{ display: "flex", alignItems: "center", gap: "0.5rem" }}
+            >
+              <DollarSign size={16} />
+              Aporte Extra Necesario
+            </div>
           </p>
           <p
             style={{
@@ -1909,10 +1951,9 @@ function DashboardRecommendationCard({
               fontWeight: "700",
             }}
           >
-            $
-            {Math.ceil(
-              recommendation.actions.extraContribution.amount
-            ).toLocaleString()}
+            {formatCurrencyES(
+              Math.ceil(recommendation.actions.extraContribution.amount)
+            )}
           </p>
         </div>
       )}
@@ -1929,7 +1970,12 @@ function DashboardRecommendationCard({
           }}
         >
           <p style={{ color: "#60a5fa", fontWeight: "600" }}>
-            💰 Aportación Sugerida
+            <div
+              style={{ display: "flex", alignItems: "center", gap: "0.5rem" }}
+            >
+              <DollarSign size={16} />
+              Aportación Sugerida
+            </div>
           </p>
           <p
             style={{
@@ -1938,8 +1984,9 @@ function DashboardRecommendationCard({
               fontWeight: "700",
             }}
           >
-            $
-            {recommendation.actions.contributionReminder.suggestedAmount.toLocaleString()}
+            {formatCurrencyES(
+              recommendation.actions.contributionReminder.suggestedAmount
+            )}
           </p>
         </div>
       )}

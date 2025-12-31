@@ -13,6 +13,20 @@ import {
   usePortfolios,
   invalidatePortfolioCache,
 } from "../../lib/hooks/use-portfolio-data";
+import {
+  Rocket,
+  TrendingUp,
+  BarChart,
+  DollarSign,
+  Scale,
+  Edit,
+} from "lucide-react";
+import { NumberInput } from "../../components/NumberInput";
+import {
+  formatCurrencyES,
+  formatPercentES,
+  formatNumberES,
+} from "../../lib/number-format";
 
 /**
  * Onboarding page - wizard for creating first portfolio
@@ -395,7 +409,10 @@ export default function Onboarding() {
         <div style={cardStyle}>
           {/* Header */}
           <div style={{ textAlign: "center", marginBottom: "2rem" }}>
-            <h1 style={titleStyle}>🚀 Configura tu Portfolio</h1>
+            <h1 style={{ ...titleStyle, display: "flex", alignItems: "center", justifyContent: "center", gap: "0.5rem" }}>
+              <Rocket size={28} />
+              Configura tu Portfolio
+            </h1>
             <p style={{ color: "#94a3b8", fontSize: "0.9rem" }}>
               Vamos a configurar tu portfolio de inversión apalancada
             </p>
@@ -460,15 +477,13 @@ export default function Onboarding() {
 
                 <div style={fieldStyle}>
                   <label style={labelStyle}>Capital Inicial (USD)</label>
-                  <input
-                    type="number"
+                  <NumberInput
                     value={initialCapital}
-                    onChange={(e) =>
-                      setInitialCapital(parseFloat(e.target.value) || 0)
-                    }
-                    style={inputStyle}
-                    placeholder="10000"
+                    onChange={(val) => setInitialCapital(isNaN(val) ? 0 : val)}
                     min={0}
+                    decimals={0}
+                    placeholder="10000"
+                    style={inputStyle}
                   />
                   <p style={helpStyle}>
                     El capital inicial representa tu equity disponible para
@@ -613,7 +628,10 @@ export default function Onboarding() {
                                   fontSize: "0.95rem",
                                 }}
                               >
-                                ${result.price.toFixed(2)}
+                                {formatCurrencyES(result.price, {
+                                  minimumFractionDigits: 2,
+                                  maximumFractionDigits: 2,
+                                })}
                               </div>
                             )}
                           </div>
@@ -675,7 +693,10 @@ export default function Onboarding() {
                               <span
                                 style={{ color: "#22c55e", fontSize: "0.9rem" }}
                               >
-                                ${asset.price.toFixed(2)}
+                                {formatCurrencyES(asset.price, {
+                                  minimumFractionDigits: 2,
+                                  maximumFractionDigits: 2,
+                                })}
                               </span>
                             )}
                             <button
@@ -735,8 +756,9 @@ export default function Onboarding() {
                       style={{ accentColor: "#3b82f6" }}
                     />
                     <div style={{ marginLeft: "0.75rem" }}>
-                      <div style={{ fontWeight: "600", color: "#f1f5f9" }}>
-                        📈 Optimización Sharpe
+                      <div style={{ display: "flex", alignItems: "center", gap: "0.5rem", fontWeight: "600", color: "#f1f5f9" }}>
+                        <TrendingUp size={16} />
+                        Optimización Sharpe
                       </div>
                       <div
                         style={{
@@ -771,7 +793,10 @@ export default function Onboarding() {
                     />
                     <div style={{ marginLeft: "0.75rem" }}>
                       <div style={{ fontWeight: "600", color: "#f1f5f9" }}>
-                        ⚖️ Pesos Iguales
+                        <div style={{ display: "flex", alignItems: "center", gap: "0.5rem" }}>
+                          <Scale size={16} />
+                          Pesos Iguales
+                        </div>
                       </div>
                       <div
                         style={{
@@ -781,7 +806,10 @@ export default function Onboarding() {
                         }}
                       >
                         Cada activo tendrá el mismo peso (
-                        {(100 / assets.length).toFixed(1)}% cada uno)
+                        {formatNumberES(100 / assets.length, {
+                          minimumFractionDigits: 1,
+                          maximumFractionDigits: 1,
+                        })}% cada uno)
                       </div>
                     </div>
                   </label>
@@ -806,7 +834,10 @@ export default function Onboarding() {
                     />
                     <div style={{ marginLeft: "0.75rem" }}>
                       <div style={{ fontWeight: "600", color: "#f1f5f9" }}>
-                        ✏️ Asignación Manual
+                        <div style={{ display: "flex", alignItems: "center", gap: "0.5rem" }}>
+                          <Edit size={16} />
+                          Asignación Manual
+                        </div>
                       </div>
                       <div
                         style={{
@@ -855,19 +886,17 @@ export default function Onboarding() {
                             }
                             style={{ flex: 1, accentColor: "#3b82f6" }}
                           />
-                          <input
-                            type="number"
+                          <NumberInput
                             min={0}
                             max={100}
-                            value={(
-                              (manualWeights[asset.symbol] || 0) * 100
-                            ).toFixed(0)}
-                            onChange={(e) =>
+                            value={(manualWeights[asset.symbol] || 0) * 100}
+                            onChange={(val) =>
                               handleWeightChange(
                                 asset.symbol,
-                                parseFloat(e.target.value) / 100
+                                isNaN(val) ? 0 : val / 100
                               )
                             }
+                            decimals={0}
                             style={{
                               ...inputStyle,
                               width: "70px",
@@ -946,7 +975,7 @@ export default function Onboarding() {
                         ? "Los pesos se calcularán automáticamente basándose en el histórico de precios cuando realices un rebalance."
                         : `Cada activo tendrá un peso igual de ${(
                             100 / assets.length
-                          ).toFixed(1)}%.`}
+                          )}%.`}
                     </p>
                   </div>
                 )}
@@ -970,7 +999,10 @@ export default function Onboarding() {
 
                 {/* Leverage */}
                 <div style={sectionStyle}>
-                  <h3 style={sectionTitleStyle}>📊 Rango de Leverage</h3>
+                  <h3 style={{ ...sectionTitleStyle, display: "flex", alignItems: "center", gap: "0.5rem" }}>
+                    <BarChart size={18} />
+                    Rango de Leverage
+                  </h3>
                   <div
                     style={{
                       display: "grid",
@@ -987,16 +1019,14 @@ export default function Onboarding() {
                           gap: "0.5rem",
                         }}
                       >
-                        <input
-                          type="number"
+                        <NumberInput
                           value={leverageMin}
-                          onChange={(e) =>
-                            setLeverageMin(parseFloat(e.target.value) || 1)
-                          }
-                          style={inputStyle}
+                          onChange={(val) => setLeverageMin(isNaN(val) ? 1 : val)}
                           min={1}
                           max={10}
                           step={0.1}
+                          decimals={1}
+                          style={inputStyle}
                         />
                         <span style={{ color: "#94a3b8" }}>x</span>
                       </div>
@@ -1010,16 +1040,14 @@ export default function Onboarding() {
                           gap: "0.5rem",
                         }}
                       >
-                        <input
-                          type="number"
+                        <NumberInput
                           value={leverageMax}
-                          onChange={(e) =>
-                            setLeverageMax(parseFloat(e.target.value) || 1)
-                          }
-                          style={inputStyle}
+                          onChange={(val) => setLeverageMax(isNaN(val) ? 1 : val)}
                           min={1}
                           max={10}
                           step={0.1}
+                          decimals={1}
+                          style={inputStyle}
                         />
                         <span style={{ color: "#94a3b8" }}>x</span>
                       </div>
@@ -1033,16 +1061,14 @@ export default function Onboarding() {
                           gap: "0.5rem",
                         }}
                       >
-                        <input
-                          type="number"
+                        <NumberInput
                           value={leverageTarget}
-                          onChange={(e) =>
-                            setLeverageTarget(parseFloat(e.target.value) || 1)
-                          }
-                          style={inputStyle}
+                          onChange={(val) => setLeverageTarget(isNaN(val) ? 1 : val)}
                           min={1}
                           max={10}
                           step={0.1}
+                          decimals={1}
+                          style={inputStyle}
                         />
                         <span style={{ color: "#94a3b8" }}>x</span>
                       </div>
@@ -1052,7 +1078,10 @@ export default function Onboarding() {
 
                 {/* Contributions */}
                 <div style={sectionStyle}>
-                  <h3 style={sectionTitleStyle}>💰 Aportaciones Periódicas</h3>
+                  <h3 style={{ ...sectionTitleStyle, display: "flex", alignItems: "center", gap: "0.5rem" }}>
+                    <DollarSign size={18} />
+                    Aportaciones Periódicas
+                  </h3>
                   <div
                     style={{
                       display: "grid",
@@ -1062,16 +1091,14 @@ export default function Onboarding() {
                   >
                     <div>
                       <label style={labelStyle}>Monto (USD)</label>
-                      <input
-                        type="number"
+                      <NumberInput
                         value={monthlyContribution}
-                        onChange={(e) =>
-                          setMonthlyContribution(
-                            parseFloat(e.target.value) || 0
-                          )
+                        onChange={(val) =>
+                          setMonthlyContribution(isNaN(val) ? 0 : val)
                         }
-                        style={inputStyle}
                         min={0}
+                        decimals={0}
+                        style={inputStyle}
                       />
                     </div>
                     <div>
@@ -1120,14 +1147,16 @@ export default function Onboarding() {
                           <option value={6}>Sábado</option>
                         </select>
                       ) : (
-                        <input
-                          type="number"
+                        <NumberInput
                           value={contributionDayOfMonth}
-                          onChange={(e) =>
+                          onChange={(val) =>
                             setContributionDayOfMonth(
-                              parseInt(e.target.value) || 1
+                              isNaN(val) ? 1 : Math.round(val)
                             )
                           }
+                          min={1}
+                          max={31}
+                          decimals={0}
                           style={inputStyle}
                           min={1}
                           max={31}
@@ -1177,7 +1206,7 @@ export default function Onboarding() {
                       {portfolioName}
                     </p>
                     <p style={{ color: "#22c55e", margin: "0.25rem 0 0 0" }}>
-                      Capital inicial: ${initialCapital.toLocaleString()}
+                      Capital inicial: {formatCurrencyES(initialCapital)}
                     </p>
                   </div>
 
@@ -1226,10 +1255,24 @@ export default function Onboarding() {
                       ASIGNACIÓN DE PESOS
                     </h4>
                     <p style={{ color: "#f1f5f9", margin: 0 }}>
-                      {weightMethod === "sharpe" &&
-                        "📈 Optimización Sharpe (automático)"}
-                      {weightMethod === "equal" && "⚖️ Pesos Iguales"}
-                      {weightMethod === "manual" && "✏️ Asignación Manual"}
+                      {weightMethod === "sharpe" && (
+                        <div style={{ display: "flex", alignItems: "center", gap: "0.5rem" }}>
+                          <TrendingUp size={16} />
+                          Optimización Sharpe (automático)
+                        </div>
+                      )}
+                      {weightMethod === "equal" && (
+                        <div style={{ display: "flex", alignItems: "center", gap: "0.5rem" }}>
+                          <Scale size={16} />
+                          Pesos Iguales
+                        </div>
+                      )}
+                      {weightMethod === "manual" && (
+                        <div style={{ display: "flex", alignItems: "center", gap: "0.5rem" }}>
+                          <Edit size={16} />
+                          Asignación Manual
+                        </div>
+                      )}
                     </p>
                   </div>
 
@@ -1260,7 +1303,7 @@ export default function Onboarding() {
                       APORTACIONES
                     </h4>
                     <p style={{ color: "#f1f5f9", margin: 0 }}>
-                      ${monthlyContribution.toLocaleString()}{" "}
+                      {formatCurrencyES(monthlyContribution)}{" "}
                       {contributionFrequency === "weekly" && "semanales"}
                       {contributionFrequency === "biweekly" && "bisemanales"}
                       {contributionFrequency === "monthly" && "mensuales"}
@@ -1379,7 +1422,10 @@ export default function Onboarding() {
               )}
               {currentStep === totalSteps && !isSubmitting && (
                 <button onClick={handleSubmit} style={submitButtonStyle}>
-                  🚀 Crear Portfolio
+                  <div style={{ display: "flex", alignItems: "center", gap: "0.5rem" }}>
+                    <Rocket size={18} />
+                    Crear Portfolio
+                  </div>
                 </button>
               )}
             </div>

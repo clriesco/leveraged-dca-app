@@ -5,6 +5,8 @@ import { useAuth } from "../../contexts/AuthContext";
 import { createContribution, getPortfoliosByEmail } from "../../lib/api";
 import DashboardSidebar from "../../components/DashboardSidebar";
 import { invalidatePortfolioCache } from "../../lib/hooks/use-portfolio-data";
+import { NumberInput } from "../../components/NumberInput";
+import { parseNumberES } from "../../lib/number-format";
 
 /**
  * Monthly contribution page - Registers the contribution amount
@@ -14,7 +16,7 @@ export default function Contribution() {
   const { user, loading } = useAuth();
 
   const [portfolioId, setPortfolioId] = useState<string | null>(null);
-  const [amount, setAmount] = useState("1000");
+  const [amount, setAmount] = useState<number>(1000);
   const [note, setNote] = useState("");
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [isLoading, setIsLoading] = useState(true);
@@ -37,9 +39,14 @@ export default function Contribution() {
 
       // Pre-fill amount from URL if provided (e.g., from recommendations)
       if (urlAmount) {
-        setAmount(urlAmount);
+        const parsedAmount = parseNumberES(urlAmount);
+        setAmount(isNaN(parsedAmount) ? 1000 : parsedAmount);
         if (isExtraContribution) {
-          setNote(`Extra contribution to reduce leverage - ${new Date().toLocaleDateString()}`);
+          setNote(
+            `Aportación extra para reducir el leverage - ${new Date().toLocaleDateString(
+              "es-ES"
+            )}`
+          );
         }
       }
 
@@ -69,11 +76,18 @@ export default function Contribution() {
     } else if (user) {
       loadPortfolio();
     }
-  }, [user, loading, router, router.query.portfolioId, router.query.amount, isExtraContribution]);
+  }, [
+    user,
+    loading,
+    router,
+    router.query.portfolioId,
+    router.query.amount,
+    isExtraContribution,
+  ]);
 
   const handleSubmit = async (e: FormEvent) => {
     e.preventDefault();
-    
+
     if (!portfolioId) {
       setError("No se ha seleccionado un portfolio");
       return;
@@ -86,8 +100,10 @@ export default function Contribution() {
     try {
       await createContribution({
         portfolioId,
-        amount: parseFloat(amount),
-        note: note || `Monthly contribution - ${new Date().toLocaleDateString()}`,
+        amount: isNaN(amount) ? 0 : amount,
+        note:
+          note ||
+          `Monthly contribution - ${new Date().toLocaleDateString("es-ES")}`,
       });
 
       // Invalidate cache so dashboard shows updated data
@@ -99,7 +115,9 @@ export default function Contribution() {
         router.push("/dashboard");
       }, 2000);
     } catch (err) {
-      setError(err instanceof Error ? err.message : "Error al registrar la aportación");
+      setError(
+        err instanceof Error ? err.message : "Error al registrar la aportación"
+      );
     } finally {
       setIsSubmitting(false);
     }
@@ -111,7 +129,14 @@ export default function Contribution() {
         <Head>
           <title>Cargando...</title>
         </Head>
-        <div style={{ display: "flex", justifyContent: "center", alignItems: "center", minHeight: "100vh" }}>
+        <div
+          style={{
+            display: "flex",
+            justifyContent: "center",
+            alignItems: "center",
+            minHeight: "100vh",
+          }}
+        >
           <p style={{ color: "white", fontSize: "1.2rem" }}>Cargando...</p>
         </div>
       </>
@@ -147,104 +172,139 @@ export default function Contribution() {
                   letterSpacing: "-0.025em",
                 }}
               >
-                {isExtraContribution ? "Aportación Extra" : "Aportación Mensual"}
+                {isExtraContribution
+                  ? "Aportación Extra"
+                  : "Aportación Mensual"}
               </h1>
               <p style={{ color: "#94a3b8", fontSize: "0.875rem" }}>
-                {isExtraContribution 
+                {isExtraContribution
                   ? "Registra una aportación extra para reducir tu leverage y llevarlo de vuelta al rango."
                   : "Registra tu aportación mensual. Después de esto, puedes rebalancear tu portfolio."}
               </p>
             </div>
 
-          <form onSubmit={handleSubmit}>
-            <div
-              style={{
-                background: "rgba(255, 255, 255, 0.1)",
-                borderRadius: "16px",
-                padding: "2rem",
-                backdropFilter: "blur(10px)",
-              }}
-            >
-              <div style={{ marginBottom: "1.5rem" }}>
-                <label style={{ display: "block", fontWeight: "500", marginBottom: "0.5rem", color: "rgba(255, 255, 255, 0.9)" }}>
-                  Cantidad de Aportación (USD)
-                </label>
-                <input
-                  type="number"
-                  step="0.01"
-                  min="0"
-                  value={amount}
-                  onChange={(e) => setAmount(e.target.value)}
-                  required
-                  disabled={isSubmitting}
-                  style={{
-                    width: "100%",
-                    padding: "0.75rem 1rem",
-                    background: "rgba(255, 255, 255, 0.1)",
-                    color: "white",
-                    border: "2px solid rgba(255, 255, 255, 0.2)",
-                    borderRadius: "8px",
-                    fontSize: "1.25rem",
-                    boxSizing: "border-box",
-                  }}
-                />
-              </div>
-
-              <div style={{ marginBottom: "1.5rem" }}>
-                <label style={{ display: "block", fontWeight: "500", marginBottom: "0.5rem", color: "rgba(255, 255, 255, 0.9)" }}>
-                  Nota (opcional)
-                </label>
-                <input
-                  type="text"
-                  value={note}
-                  onChange={(e) => setNote(e.target.value)}
-                  placeholder="e.g., December 2025 DCA"
-                  disabled={isSubmitting}
-                  style={{
-                    width: "100%",
-                    padding: "0.75rem 1rem",
-                    background: "rgba(255, 255, 255, 0.1)",
-                    color: "white",
-                    border: "2px solid rgba(255, 255, 255, 0.2)",
-                    borderRadius: "8px",
-                    fontSize: "1rem",
-                    boxSizing: "border-box",
-                  }}
-                />
-              </div>
-
-              <button
-                type="submit"
-                disabled={isSubmitting || !portfolioId}
+            <form onSubmit={handleSubmit}>
+              <div
                 style={{
-                  width: "100%",
-                  padding: "1rem",
-                  background: "linear-gradient(135deg, #667eea 0%, #764ba2 100%)",
-                  color: "white",
-                  border: "none",
-                  borderRadius: "8px",
-                  fontSize: "1rem",
-                  fontWeight: "600",
-                  opacity: isSubmitting || !portfolioId ? 0.7 : 1,
-                  cursor: isSubmitting || !portfolioId ? "not-allowed" : "pointer",
+                  background: "rgba(255, 255, 255, 0.1)",
+                  borderRadius: "16px",
+                  padding: "2rem",
+                  backdropFilter: "blur(10px)",
                 }}
               >
-                {isSubmitting ? "Guardando..." : "Registrar Aportación"}
-              </button>
-            </div>
-          </form>
+                <div style={{ marginBottom: "1.5rem" }}>
+                  <label
+                    style={{
+                      display: "block",
+                      fontWeight: "500",
+                      marginBottom: "0.5rem",
+                      color: "rgba(255, 255, 255, 0.9)",
+                    }}
+                  >
+                    Cantidad de Aportación (USD)
+                  </label>
+                  <NumberInput
+                    value={amount}
+                    onChange={(val) => setAmount(isNaN(val) ? 0 : val)}
+                    min={0}
+                    step={0.01}
+                    decimals={2}
+                    disabled={isSubmitting}
+                    style={{
+                      width: "100%",
+                      padding: "0.75rem 1rem",
+                      background: "rgba(255, 255, 255, 0.1)",
+                      color: "white",
+                      border: "2px solid rgba(255, 255, 255, 0.2)",
+                      borderRadius: "8px",
+                      fontSize: "1.25rem",
+                      boxSizing: "border-box",
+                    }}
+                  />
+                </div>
 
-          {message && (
-            <div style={{ marginTop: "1rem", padding: "1rem", background: "rgba(74, 222, 128, 0.2)", color: "#4ade80", borderRadius: "8px", border: "1px solid rgba(74, 222, 128, 0.3)" }}>
-              {message}
-            </div>
-          )}
+                <div style={{ marginBottom: "1.5rem" }}>
+                  <label
+                    style={{
+                      display: "block",
+                      fontWeight: "500",
+                      marginBottom: "0.5rem",
+                      color: "rgba(255, 255, 255, 0.9)",
+                    }}
+                  >
+                    Nota (opcional)
+                  </label>
+                  <input
+                    type="text"
+                    value={note}
+                    onChange={(e) => setNote(e.target.value)}
+                    placeholder="p.e. Diciembre 2025 DCA"
+                    disabled={isSubmitting}
+                    style={{
+                      width: "100%",
+                      padding: "0.75rem 1rem",
+                      background: "rgba(255, 255, 255, 0.1)",
+                      color: "white",
+                      border: "2px solid rgba(255, 255, 255, 0.2)",
+                      borderRadius: "8px",
+                      fontSize: "1rem",
+                      boxSizing: "border-box",
+                    }}
+                  />
+                </div>
 
-          {error && (
-            <div style={{ marginTop: "1rem", padding: "1rem", background: "rgba(248, 113, 113, 0.2)", color: "#f87171", borderRadius: "8px", border: "1px solid rgba(248, 113, 113, 0.3)" }}>
-              {error}
-            </div>
-          )}
+                <button
+                  type="submit"
+                  disabled={isSubmitting || !portfolioId}
+                  style={{
+                    width: "100%",
+                    padding: "1rem",
+                    background:
+                      "linear-gradient(135deg, #667eea 0%, #764ba2 100%)",
+                    color: "white",
+                    border: "none",
+                    borderRadius: "8px",
+                    fontSize: "1rem",
+                    fontWeight: "600",
+                    opacity: isSubmitting || !portfolioId ? 0.7 : 1,
+                    cursor:
+                      isSubmitting || !portfolioId ? "not-allowed" : "pointer",
+                  }}
+                >
+                  {isSubmitting ? "Guardando..." : "Registrar Aportación"}
+                </button>
+              </div>
+            </form>
+
+            {message && (
+              <div
+                style={{
+                  marginTop: "1rem",
+                  padding: "1rem",
+                  background: "rgba(74, 222, 128, 0.2)",
+                  color: "#4ade80",
+                  borderRadius: "8px",
+                  border: "1px solid rgba(74, 222, 128, 0.3)",
+                }}
+              >
+                {message}
+              </div>
+            )}
+
+            {error && (
+              <div
+                style={{
+                  marginTop: "1rem",
+                  padding: "1rem",
+                  background: "rgba(248, 113, 113, 0.2)",
+                  color: "#f87171",
+                  borderRadius: "8px",
+                  border: "1px solid rgba(248, 113, 113, 0.3)",
+                }}
+              >
+                {error}
+              </div>
+            )}
           </div>
         </div>
       </DashboardSidebar>

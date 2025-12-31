@@ -30,8 +30,11 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     // Check active session and refresh if needed
     const initializeAuth = async () => {
       try {
-        const { data: { session }, error } = await supabase.auth.getSession();
-        
+        const {
+          data: { session },
+          error,
+        } = await supabase.auth.getSession();
+
         if (error) {
           console.error("[AuthContext] Error getting session:", error);
           setLoading(false);
@@ -62,7 +65,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
       data: { subscription },
     } = supabase.auth.onAuthStateChange(async (event, session) => {
       console.log(`[AuthContext] Auth state changed: ${event}`);
-      
+
       if (session) {
         setUser(session.user);
         if (session.access_token) {
@@ -84,7 +87,9 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     // Periodically refresh session to ensure token is up to date
     const refreshInterval = setInterval(async () => {
       try {
-        const { data: { session } } = await supabase.auth.getSession();
+        const {
+          data: { session },
+        } = await supabase.auth.getSession();
         if (session?.access_token) {
           const currentToken = localStorage.getItem("supabase_token");
           if (currentToken !== session.access_token) {
@@ -107,9 +112,11 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     // Use window.location.origin to automatically detect localhost or production
     // This ensures magic links redirect to the correct environment
     const redirectUrl = `${window.location.origin}/dashboard`;
-    
-    console.log(`[AuthContext] Sending magic link with redirect: ${redirectUrl}`);
-    
+
+    console.log(
+      `[AuthContext] Sending magic link with redirect: ${redirectUrl}`
+    );
+
     const { error } = await supabase.auth.signInWithOtp({
       email,
       options: {

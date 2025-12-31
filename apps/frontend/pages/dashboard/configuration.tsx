@@ -11,6 +11,9 @@ import {
 } from "../../lib/api";
 import DashboardSidebar from "../../components/DashboardSidebar";
 import { invalidatePortfolioCache } from "../../lib/hooks/use-portfolio-data";
+import { DollarSign, BarChart, TrendingUp, Settings, Scale, Edit, Shield, Bell } from "lucide-react";
+import { NumberInput } from "../../components/NumberInput";
+import { formatNumberES, formatPercentES } from "../../lib/number-format";
 
 /**
  * Portfolio Configuration Page
@@ -129,7 +132,10 @@ export default function Configuration() {
       const totalWeight = targetWeights.reduce((sum, tw) => sum + tw.weight, 0);
       if (Math.abs(totalWeight - 1) > 0.01) {
         setError(
-          `Los pesos objetivo deben sumar 100%. Actualmente: ${(totalWeight * 100).toFixed(1)}%`
+          `Los pesos objetivo deben sumar 100%. Actualmente: ${formatNumberES(totalWeight * 100, {
+            minimumFractionDigits: 1,
+            maximumFractionDigits: 1,
+          })}%`
         );
         setIsSaving(false);
         return;
@@ -204,7 +210,10 @@ export default function Configuration() {
                   letterSpacing: "-0.025em",
                 }}
               >
-                ⚙️ Configuración del Portfolio
+                <div style={{ display: "flex", alignItems: "center", gap: "0.5rem" }}>
+                  <Settings size={24} />
+                  Configuración del Portfolio
+                </div>
               </h1>
               <p style={{ color: "#94a3b8", fontSize: "0.875rem" }}>
                 Personaliza los parámetros de la estrategia DCA apalancada
@@ -213,7 +222,14 @@ export default function Configuration() {
 
           <form onSubmit={handleSubmit}>
             {/* Contribution Settings */}
-            <ConfigSection title="💰 Aportación Periódica">
+            <ConfigSection
+              title={
+                <div style={{ display: "flex", alignItems: "center", gap: "0.5rem" }}>
+                  <DollarSign size={18} />
+                  Aportación Periódica
+                </div>
+              }
+            >
               <div style={gridStyle}>
                 <InputField
                   label="Monto de Aportación (USD)"
@@ -317,7 +333,14 @@ export default function Configuration() {
             </ConfigSection>
 
             {/* Leverage Settings */}
-            <ConfigSection title="📊 Rango de Leverage">
+            <ConfigSection
+              title={
+                <div style={{ display: "flex", alignItems: "center", gap: "0.5rem" }}>
+                  <BarChart size={18} />
+                  Rango de Leverage
+                </div>
+              }
+            >
               <div style={gridStyle}>
                 <InputField
                   label="Leverage Mínimo"
@@ -357,7 +380,14 @@ export default function Configuration() {
             </ConfigSection>
 
             {/* Target Weights */}
-            <ConfigSection title="⚖️ Asignación de Pesos">
+            <ConfigSection
+              title={
+                <div style={{ display: "flex", alignItems: "center", gap: "0.5rem" }}>
+                  <Scale size={18} />
+                  Asignación de Pesos
+                </div>
+              }
+            >
               {/* Weight allocation method selector */}
               <div style={{ marginBottom: "1.5rem" }}>
                 <label
@@ -408,8 +438,9 @@ export default function Configuration() {
                       style={{ accentColor: "#3b82f6" }}
                     />
                     <div>
-                      <div style={{ color: "#f1f5f9", fontWeight: "600" }}>
-                        📈 Optimización Sharpe
+                      <div style={{ display: "flex", alignItems: "center", gap: "0.5rem", color: "#f1f5f9", fontWeight: "600" }}>
+                        <TrendingUp size={16} />
+                        Optimización Sharpe
                       </div>
                       <div
                         style={{
@@ -453,7 +484,10 @@ export default function Configuration() {
                     />
                     <div>
                       <div style={{ color: "#f1f5f9", fontWeight: "600" }}>
-                        ✏️ Asignación Manual
+                        <div style={{ display: "flex", alignItems: "center", gap: "0.5rem" }}>
+                          <Edit size={16} />
+                          Asignación Manual
+                        </div>
                       </div>
                       <div
                         style={{
@@ -511,21 +545,26 @@ export default function Configuration() {
                             accentColor: "#3b82f6",
                           }}
                         />
-                        <input
-                          type="number"
+                        <NumberInput
+                          value={tw.weight * 100}
+                          onChange={(val) =>
+                            handleWeightChange(
+                              idx,
+                              isNaN(val) ? 0 : val / 100
+                            )
+                          }
                           min={0}
                           max={100}
                           step={1}
-                          value={(tw.weight * 100).toFixed(0)}
-                          onChange={(e) =>
-                            handleWeightChange(
-                              idx,
-                              parseFloat(e.target.value) / 100
-                            )
-                          }
+                          decimals={1}
                           style={{
                             width: "70px",
                             padding: "0.5rem",
+                            background: "rgba(255,255,255,0.05)",
+                            color: "white",
+                            border: "1px solid #334155",
+                            borderRadius: "6px",
+                            fontSize: "0.9rem",
                             background: "rgba(255,255,255,0.1)",
                             color: "white",
                             border: "1px solid #334155",
@@ -556,7 +595,10 @@ export default function Configuration() {
                         fontWeight: "600",
                       }}
                     >
-                      Total: {(totalWeight * 100).toFixed(1)}%
+                      Total: {formatNumberES(totalWeight * 100, {
+                        minimumFractionDigits: 1,
+                        maximumFractionDigits: 1,
+                      })}%
                     </span>
                     {!weightsValid && (
                       <span style={{ color: "#f87171", fontSize: "0.875rem" }}>
@@ -639,7 +681,14 @@ export default function Configuration() {
 
             {/* Sharpe Optimization - Only visible when Sharpe optimization is selected */}
             {formData.useDynamicSharpeRebalance && (
-              <ConfigSection title="📈 Optimización Sharpe">
+              <ConfigSection
+                title={
+                  <div style={{ display: "flex", alignItems: "center", gap: "0.5rem" }}>
+                    <TrendingUp size={18} />
+                    Optimización Sharpe
+                  </div>
+                }
+              >
                 <div style={gridStyle}>
                   <InputField
                     label="Shrinkage Retornos"
@@ -669,7 +718,14 @@ export default function Configuration() {
             )}
 
             {/* Margin Settings */}
-            <ConfigSection title="🛡️ Márgenes de Seguridad">
+            <ConfigSection
+              title={
+                <div style={{ display: "flex", alignItems: "center", gap: "0.5rem" }}>
+                  <Shield size={18} />
+                  Márgenes de Seguridad
+                </div>
+              }
+            >
               <div style={gridStyle}>
                 <InputField
                   label="Margen de Mantenimiento"
@@ -817,7 +873,7 @@ function ConfigSection({
   title,
   children,
 }: {
-  title: string;
+  title: string | React.ReactNode;
   children: React.ReactNode;
 }) {
   return (
@@ -855,6 +911,7 @@ function InputField({
   step,
   suffix,
   help,
+  decimals,
 }: {
   label: string;
   value: number;
@@ -865,7 +922,18 @@ function InputField({
   step?: number;
   suffix?: string;
   help?: string;
+  decimals?: number;
 }) {
+  // Determine decimals based on step if not provided
+  const decimalPlaces =
+    decimals !== undefined
+      ? decimals
+      : step && step < 1
+      ? step.toString().split(".")[1]?.length || 2
+      : step === 0.1
+      ? 1
+      : 0;
+
   return (
     <div>
       <label
@@ -880,23 +948,40 @@ function InputField({
         {label}
       </label>
       <div style={{ display: "flex", alignItems: "center", gap: "0.5rem" }}>
-        <input
-          type={type}
-          value={value}
-          onChange={(e) => onChange(parseFloat(e.target.value) || 0)}
-          min={min}
-          max={max}
-          step={step}
-          style={{
-            flex: 1,
-            padding: "0.625rem 0.875rem",
-            background: "rgba(255,255,255,0.05)",
-            color: "white",
-            border: "1px solid #334155",
-            borderRadius: "6px",
-            fontSize: "0.95rem",
-          }}
-        />
+        {type === "number" ? (
+          <NumberInput
+            value={value}
+            onChange={onChange}
+            min={min}
+            max={max}
+            step={step}
+            decimals={decimalPlaces}
+            style={{
+              flex: 1,
+              padding: "0.625rem 0.875rem",
+              background: "rgba(255,255,255,0.05)",
+              color: "white",
+              border: "1px solid #334155",
+              borderRadius: "6px",
+              fontSize: "0.95rem",
+            }}
+          />
+        ) : (
+          <input
+            type={type}
+            value={value}
+            onChange={(e) => onChange(parseFloat(e.target.value) || 0)}
+            style={{
+              flex: 1,
+              padding: "0.625rem 0.875rem",
+              background: "rgba(255,255,255,0.05)",
+              color: "white",
+              border: "1px solid #334155",
+              borderRadius: "6px",
+              fontSize: "0.95rem",
+            }}
+          />
+        )}
         {suffix && (
           <span
             style={{ color: "#94a3b8", fontSize: "0.9rem", minWidth: "30px" }}

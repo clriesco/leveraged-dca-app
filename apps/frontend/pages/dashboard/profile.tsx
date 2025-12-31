@@ -4,6 +4,7 @@ import Head from "next/head";
 import { useAuth } from "../../contexts/AuthContext";
 import { getProfile, updateProfile, UserProfile } from "../../lib/api";
 import DashboardSidebar from "../../components/DashboardSidebar";
+import { FileText, Bell } from "lucide-react";
 
 /**
  * Profile page - User profile management
@@ -223,7 +224,10 @@ export default function Profile() {
                     marginBottom: "1rem",
                   }}
                 >
-                  📝 Información Personal
+                  <div style={{ display: "flex", alignItems: "center", gap: "0.5rem" }}>
+                    <FileText size={18} />
+                    Información Personal
+                  </div>
                 </h2>
 
                 <div style={{ marginBottom: "1rem" }}>
@@ -315,7 +319,10 @@ export default function Profile() {
                     marginBottom: "1rem",
                   }}
                 >
-                  🔔 Preferencias de Notificaciones
+                  <div style={{ display: "flex", alignItems: "center", gap: "0.5rem" }}>
+                    <Bell size={18} />
+                    Preferencias de Notificaciones
+                  </div>
                 </h2>
 
                 <div style={{ display: "flex", flexDirection: "column", gap: "1rem" }}>

@@ -1,6 +1,18 @@
 import React, { useState, ReactNode } from "react";
 import { useRouter } from "next/router";
 import { useAuth } from "../contexts/AuthContext";
+import {
+  LayoutDashboard,
+  DollarSign,
+  Scale,
+  Edit,
+  Settings,
+  User,
+  LogOut,
+  TrendingUp,
+  ChevronLeft,
+  ChevronRight,
+} from "lucide-react";
 
 /**
  * Dashboard Sidebar Component
@@ -31,37 +43,37 @@ export default function DashboardSidebar({
   const menuItems = [
     {
       label: "Dashboard",
-      icon: "📊",
+      icon: LayoutDashboard,
       path: "/dashboard",
       color: "#60a5fa",
     },
     {
       label: "Añadir Aportación",
-      icon: "💰",
+      icon: DollarSign,
       path: "/dashboard/contribution",
       color: "#34d399",
     },
     {
       label: "Rebalancear",
-      icon: "⚖️",
+      icon: Scale,
       path: "/dashboard/rebalance",
       color: "#a5b4fc",
     },
     {
       label: "Actualización Manual",
-      icon: "✏️",
+      icon: Edit,
       path: "/dashboard/manual-update",
       color: "#fbbf24",
     },
     {
       label: "Configuración",
-      icon: "⚙️",
+      icon: Settings,
       path: "/dashboard/configuration",
       color: "#94a3b8",
     },
     {
       label: "Mi Perfil",
-      icon: "👤",
+      icon: User,
       path: "/dashboard/profile",
       color: "#c084fc",
     },
@@ -104,7 +116,7 @@ export default function DashboardSidebar({
               gap: "0.75rem",
             }}
           >
-            <span style={{ fontSize: "1.5rem" }}>📈</span>
+            <TrendingUp size={24} color="#60a5fa" />
             {!isCollapsed && (
               <span
                 style={{
@@ -173,9 +185,10 @@ export default function DashboardSidebar({
                   }
                 }}
               >
-                <span style={{ fontSize: "1.25rem", flexShrink: 0 }}>
-                  {item.icon}
-                </span>
+                {React.createElement(item.icon, {
+                  size: 20,
+                  style: { flexShrink: 0 },
+                })}
                 {!isCollapsed && <span>{item.label}</span>}
               </button>
             );
@@ -218,9 +231,11 @@ export default function DashboardSidebar({
               e.currentTarget.style.color = "#64748b";
             }}
           >
-            <span style={{ fontSize: "1.25rem", flexShrink: 0 }}>
-              {isCollapsed ? "→" : "←"}
-            </span>
+            {isCollapsed ? (
+              <ChevronRight size={20} style={{ flexShrink: 0 }} />
+            ) : (
+              <ChevronLeft size={20} style={{ flexShrink: 0 }} />
+            )}
             {!isCollapsed && <span>Colapsar</span>}
           </button>
 
@@ -252,7 +267,7 @@ export default function DashboardSidebar({
               e.currentTarget.style.color = "#ef4444";
             }}
           >
-            <span style={{ fontSize: "1.25rem", flexShrink: 0 }}>🚪</span>
+            <LogOut size={20} style={{ flexShrink: 0 }} />
             {!isCollapsed && <span>Cerrar Sesión</span>}
           </button>
         </div>

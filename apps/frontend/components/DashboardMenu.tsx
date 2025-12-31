@@ -1,6 +1,16 @@
 import React, { useState } from "react";
 import { useRouter } from "next/router";
 import { useAuth } from "../contexts/AuthContext";
+import {
+  Menu,
+  DollarSign,
+  Scale,
+  Edit,
+  Settings,
+  LayoutDashboard,
+  User,
+  LogOut,
+} from "lucide-react";
 
 /**
  * Dashboard Menu Component
@@ -38,7 +48,7 @@ export default function DashboardMenu({ portfolioId }: { portfolioId: string | n
           gap: "0.5rem",
         }}
       >
-        <span>☰</span>
+        <Menu size={18} />
         <span>Menú</span>
       </button>
 
@@ -104,7 +114,7 @@ export default function DashboardMenu({ portfolioId }: { portfolioId: string | n
                 e.currentTarget.style.color = "#cbd5e1";
               }}
             >
-              <span>💰</span>
+              <DollarSign size={18} />
               <span>+ Añadir Aportación</span>
             </button>
             <button
@@ -139,7 +149,7 @@ export default function DashboardMenu({ portfolioId }: { portfolioId: string | n
                 e.currentTarget.style.color = "#cbd5e1";
               }}
             >
-              <span>⚖️</span>
+              <Scale size={18} />
               <span>Rebalancear Portfolio</span>
             </button>
             <button
@@ -174,7 +184,7 @@ export default function DashboardMenu({ portfolioId }: { portfolioId: string | n
                 e.currentTarget.style.color = "#cbd5e1";
               }}
             >
-              <span>✏️</span>
+              <Edit size={18} />
               <span>Actualización Manual</span>
             </button>
             <button
@@ -209,7 +219,7 @@ export default function DashboardMenu({ portfolioId }: { portfolioId: string | n
                 e.currentTarget.style.color = "#cbd5e1";
               }}
             >
-              <span>⚙️</span>
+              <Settings size={18} />
               <span>Configuración</span>
             </button>
             <button
@@ -242,7 +252,7 @@ export default function DashboardMenu({ portfolioId }: { portfolioId: string | n
                 e.currentTarget.style.color = "#cbd5e1";
               }}
             >
-              <span>📊</span>
+              <LayoutDashboard size={18} />
               <span>Dashboard</span>
             </button>
             <button
@@ -277,7 +287,7 @@ export default function DashboardMenu({ portfolioId }: { portfolioId: string | n
                 e.currentTarget.style.color = "#cbd5e1";
               }}
             >
-              <span>👤</span>
+              <User size={18} />
               <span>Mi Perfil</span>
             </button>
             <button
@@ -309,7 +319,7 @@ export default function DashboardMenu({ portfolioId }: { portfolioId: string | n
                 e.currentTarget.style.color = "#ef4444";
               }}
             >
-              <span>🚪</span>
+              <LogOut size={18} />
               <span>Cerrar Sesión</span>
             </button>
           </div>

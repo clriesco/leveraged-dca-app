@@ -10,6 +10,12 @@ import {
 } from "../../lib/api";
 import DashboardSidebar from "../../components/DashboardSidebar";
 import { invalidatePortfolioCache } from "../../lib/hooks/use-portfolio-data";
+import { DollarSign, Lightbulb, Brain, ClipboardList } from "lucide-react";
+import {
+  formatCurrencyES,
+  formatPercentES,
+  formatNumberES,
+} from "../../lib/number-format";
 
 /**
  * Rebalance page - Shows algorithm-calculated optimal allocation
@@ -248,10 +254,7 @@ export default function Rebalance() {
                       Equity:{" "}
                     </span>
                     <span style={{ color: "white", fontWeight: "600" }}>
-                      $
-                      {proposal.currentEquity.toLocaleString(undefined, {
-                        maximumFractionDigits: 0,
-                      })}
+                      {formatCurrencyES(proposal.currentEquity)}
                     </span>
                   </div>
                   <div style={{ marginBottom: "0.5rem" }}>
@@ -259,10 +262,7 @@ export default function Rebalance() {
                       Exposure:{" "}
                     </span>
                     <span style={{ color: "white", fontWeight: "600" }}>
-                      $
-                      {proposal.currentExposure.toLocaleString(undefined, {
-                        maximumFractionDigits: 0,
-                      })}
+                      {formatCurrencyES(proposal.currentExposure)}
                     </span>
                   </div>
                   <div>
@@ -270,7 +270,10 @@ export default function Rebalance() {
                       Leverage:{" "}
                     </span>
                     <span style={{ color: "white", fontWeight: "600" }}>
-                      {proposal.currentLeverage.toFixed(2)}x
+                      {formatNumberES(proposal.currentLeverage, {
+                        minimumFractionDigits: 2,
+                        maximumFractionDigits: 2,
+                      })}x
                     </span>
                   </div>
                 </div>
@@ -297,10 +300,7 @@ export default function Rebalance() {
                       Equity:{" "}
                     </span>
                     <span style={{ color: "#4ade80", fontWeight: "600" }}>
-                      $
-                      {proposal.summary.newEquity.toLocaleString(undefined, {
-                        maximumFractionDigits: 0,
-                      })}
+                      {formatCurrencyES(proposal.summary.newEquity)}
                     </span>
                   </div>
                   <div style={{ marginBottom: "0.5rem" }}>
@@ -308,10 +308,7 @@ export default function Rebalance() {
                       Exposición:{" "}
                     </span>
                     <span style={{ color: "white", fontWeight: "600" }}>
-                      $
-                      {proposal.summary.newExposure.toLocaleString(undefined, {
-                        maximumFractionDigits: 0,
-                      })}
+                      {formatCurrencyES(proposal.summary.newExposure)}
                     </span>
                   </div>
                   <div>
@@ -319,7 +316,10 @@ export default function Rebalance() {
                       Leverage:{" "}
                     </span>
                     <span style={{ color: "white", fontWeight: "600" }}>
-                      {proposal.summary.newLeverage.toFixed(2)}x
+                      {formatNumberES(proposal.summary.newLeverage, {
+                        minimumFractionDigits: 2,
+                        maximumFractionDigits: 2,
+                      })}x
                     </span>
                   </div>
                 </div>
@@ -356,9 +356,18 @@ export default function Rebalance() {
                       fontSize: "0.85rem",
                     }}
                   >
-                    {proposal.dynamicWeightsComputed
-                      ? "🧠 Dinámicos (Optimizados Sharpe)"
-                      : "📌 Estáticos (PORTFOLIO_INITIAL)"}
+                    <div style={{ display: "flex", alignItems: "center", gap: "0.5rem" }}>
+                      {proposal.dynamicWeightsComputed ? (
+                        <>
+                          <Brain size={16} />
+                          <span>Dinámicos (Optimizados Sharpe)</span>
+                        </>
+                      ) : (
+                        <>
+                          <span>Estáticos (PORTFOLIO_INITIAL)</span>
+                        </>
+                      )}
+                    </div>
                   </span>
                 </div>
                 <div style={{ display: "flex", gap: "1rem", flexWrap: "wrap" }}>
@@ -371,7 +380,9 @@ export default function Rebalance() {
                           fontSize: "0.85rem",
                         }}
                       >
-                        {symbol}: {((weight as number) * 100).toFixed(0)}%
+                        {symbol}: {formatNumberES((weight as number) * 100, {
+                          maximumFractionDigits: 0,
+                        })}%
                       </span>
                     )
                   )}
@@ -396,7 +407,10 @@ export default function Rebalance() {
                     marginBottom: "1.5rem",
                   }}
                 >
-                  📋 Instrucciones de Rebalance
+                  <div style={{ display: "flex", alignItems: "center", gap: "0.5rem" }}>
+                    <ClipboardList size={20} />
+                    Instrucciones de Rebalance
+                  </div>
                 </h2>
 
                 <div
@@ -458,8 +472,13 @@ export default function Rebalance() {
                               marginTop: "0.25rem",
                             }}
                           >
-                            Peso: {(pos.currentWeight * 100).toFixed(1)}% →{" "}
-                            {(pos.targetWeight * 100).toFixed(0)}%
+                            Peso: {formatNumberES(pos.currentWeight * 100, {
+                              minimumFractionDigits: 1,
+                              maximumFractionDigits: 1,
+                            })}% →{" "}
+                            {formatNumberES(pos.targetWeight * 100, {
+                              maximumFractionDigits: 0,
+                            })}%
                           </div>
                         </div>
 
@@ -487,10 +506,9 @@ export default function Rebalance() {
                                   color: "white",
                                 }}
                               >
-                                {Math.abs(pos.deltaQuantity).toLocaleString(
-                                  undefined,
-                                  { maximumFractionDigits: 6 }
-                                )}{" "}
+                                {formatNumberES(Math.abs(pos.deltaQuantity), {
+                                  maximumFractionDigits: 6,
+                                })}{" "}
                                 <span
                                   style={{
                                     color: "rgba(255, 255, 255, 0.6)",
@@ -506,15 +524,10 @@ export default function Rebalance() {
                                   fontSize: "0.85rem",
                                 }}
                               >
-                                @ $
-                                {pos.currentPrice.toLocaleString(undefined, {
+                                @ {formatCurrencyES(pos.currentPrice, {
                                   maximumFractionDigits: 2,
                                 })}{" "}
-                                ≈ $
-                                {Math.abs(pos.deltaValue).toLocaleString(
-                                  undefined,
-                                  { maximumFractionDigits: 0 }
-                                )}
+                                ≈ {formatCurrencyES(Math.abs(pos.deltaValue))}
                               </div>
                             </>
                           )}
@@ -534,26 +547,18 @@ export default function Rebalance() {
                       >
                         <span>
                           Actual:{" "}
-                          {pos.currentQuantity.toLocaleString(undefined, {
+                          {formatNumberES(pos.currentQuantity, {
                             maximumFractionDigits: 6,
                           })}{" "}
-                          ($
-                          {pos.currentValue.toLocaleString(undefined, {
-                            maximumFractionDigits: 0,
-                          })}
-                          )
+                          ({formatCurrencyES(pos.currentValue)})
                         </span>
                         <span>→</span>
                         <span>
                           Objetivo:{" "}
-                          {pos.targetQuantity.toLocaleString(undefined, {
+                          {formatNumberES(pos.targetQuantity, {
                             maximumFractionDigits: 6,
                           })}{" "}
-                          ($
-                          {pos.targetValue.toLocaleString(undefined, {
-                            maximumFractionDigits: 0,
-                          })}
-                          )
+                          ({formatCurrencyES(pos.targetValue)})
                         </span>
                       </div>
                     </div>
@@ -580,13 +585,14 @@ export default function Rebalance() {
                       margin: 0,
                     }}
                   >
-                    💰 <strong>Desglose de origen:</strong>{" "}
+                    <div style={{ display: "flex", alignItems: "center", gap: "0.5rem" }}>
+                      <DollarSign size={16} />
+                      <strong>Desglose de origen:</strong>
+                    </div>{" "}
                     {proposal.summary.equityUsedFromContribution > 0 && (
                       <>
-                        $
-                        {proposal.summary.equityUsedFromContribution.toLocaleString(
-                          undefined,
-                          { maximumFractionDigits: 0 }
+                        {formatCurrencyES(
+                          proposal.summary.equityUsedFromContribution
                         )}{" "}
                         de equity
                       </>
@@ -597,22 +603,16 @@ export default function Rebalance() {
                       )}
                     {proposal.summary.borrowIncrease > 0 && (
                       <>
-                        $
-                        {proposal.summary.borrowIncrease.toLocaleString(
-                          undefined,
-                          { maximumFractionDigits: 0 }
-                        )}{" "}
+                        {formatCurrencyES(proposal.summary.borrowIncrease)}{" "}
                         de préstamo
                       </>
                     )}
                     {proposal.summary.borrowIncrease < 0 && (
                       <>
                         Reducción de préstamo: $
-                        {Math.abs(
-                          proposal.summary.borrowIncrease
-                        ).toLocaleString(undefined, {
-                          maximumFractionDigits: 0,
-                        })}
+                        {formatCurrencyES(
+                          Math.abs(proposal.summary.borrowIncrease)
+                        )}
                       </>
                     )}
                   </p>
@@ -636,7 +636,10 @@ export default function Rebalance() {
                     margin: 0,
                   }}
                 >
-                  💡 Ejecuta estas operaciones en tu broker, luego haz clic en
+                  <div style={{ display: "flex", alignItems: "center", gap: "0.5rem" }}>
+                    <Lightbulb size={16} />
+                    Ejecuta estas operaciones en tu broker, luego haz clic en
+                  </div>
                   &quot;Aceptar&quot; para guardar la nueva composición.
                 </p>
               </div>

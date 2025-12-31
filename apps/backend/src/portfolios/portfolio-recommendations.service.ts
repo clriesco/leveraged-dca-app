@@ -332,7 +332,7 @@ export class PortfolioRecommendationsService {
         priority: "medium",
         title: "Recordatorio: Aportación Mensual",
         description: `Hoy es tu día de aportación mensual. Registra tu aportación de $${
-          config.monthlyContribution?.toLocaleString() || 0
+          config.monthlyContribution?.toLocaleString("es-ES") || 0
         }.`,
         actions: {
           contributionReminder: {
@@ -368,10 +368,15 @@ export class PortfolioRecommendationsService {
         recommendations.push({
           type: "leverage_low",
           priority: "high",
-          title: `Leverage Bajo (${leverage.toFixed(2)}x)`,
-          description: `Tu leverage efectivo está por debajo del mínimo (${leverageMin}x). Se recomienda aumentar exposición mediante reborrow hasta el leverage objetivo (${targetLeverageForReborrow.toFixed(
-            1
-          )}x).`,
+          title: `Leverage Bajo (${leverage.toFixed(2).replace(".", ",")}x)`,
+          description: `Tu leverage efectivo está por debajo del mínimo (${leverageMin
+            .toFixed(1)
+            .replace(
+              ".",
+              ","
+            )}x). Se recomienda aumentar exposición mediante reborrow hasta el leverage objetivo (${targetLeverageForReborrow
+            .toFixed(1)
+            .replace(".", ",")}x).`,
           actions: {
             purchases,
             totalPurchaseValue,
@@ -383,8 +388,15 @@ export class PortfolioRecommendationsService {
         recommendations.push({
           type: "leverage_low",
           priority: "medium",
-          title: `Leverage en el Límite Inferior (${leverage.toFixed(2)}x)`,
-          description: `Tu leverage está justo en el límite inferior (${leverageMin}x). Considera aumentar exposición si el mercado lo permite.`,
+          title: `Leverage en el Límite Inferior (${leverage
+            .toFixed(2)
+            .replace(".", ",")}x)`,
+          description: `Tu leverage está justo en el límite inferior (${leverageMin
+            .toFixed(1)
+            .replace(
+              ".",
+              ","
+            )}x). Considera aumentar exposición si el mercado lo permite.`,
           actionUrl: "/dashboard/rebalance",
         });
       }
@@ -400,8 +412,15 @@ export class PortfolioRecommendationsService {
       recommendations.push({
         type: "leverage_high",
         priority: "urgent",
-        title: `Leverage Alto (${leverage.toFixed(2)}x) - URGENTE`,
-        description: `Tu leverage efectivo está por encima del máximo (${leverageMax}x). Se recomienda realizar un aporte extra para reducir el leverage.`,
+        title: `Leverage Alto (${leverage
+          .toFixed(2)
+          .replace(".", ",")}x) - URGENTE`,
+        description: `Tu leverage efectivo está por encima del máximo (${leverageMax
+          .toFixed(1)
+          .replace(
+            ".",
+            ","
+          )}x). Se recomienda realizar un aporte extra para reducir el leverage.`,
         actions: {
           extraContribution,
         },
@@ -421,9 +440,13 @@ export class PortfolioRecommendationsService {
         type: "in_range",
         priority: "low",
         title: "Portfolio en Rango",
-        description: `Tu leverage (${leverage.toFixed(
-          2
-        )}x) está dentro del rango objetivo (${leverageMin}x - ${leverageMax}x). No se requiere acción inmediata.`,
+        description: `Tu leverage (${leverage
+          .toFixed(2)
+          .replace(".", ",")}x) está dentro del rango objetivo (${leverageMin
+          .toFixed(1)
+          .replace(".", ",")}x - ${leverageMax
+          .toFixed(1)
+          .replace(".", ",")}x). No se requiere acción inmediata.`,
       });
     }
 
@@ -570,9 +593,9 @@ export class PortfolioRecommendationsService {
     return {
       amount: Math.max(0, extraNeeded),
       currency: "USD",
-      reason: `Para reducir leverage de ${leverage.toFixed(
-        2
-      )}x a ${maxLeverage.toFixed(1)}x`,
+      reason: `Para reducir leverage de ${leverage
+        .toFixed(2)
+        .replace(".", ",")}x a ${maxLeverage.toFixed(1).replace(".", ",")}x`,
       currentLeverage: leverage,
       targetLeverage: maxLeverage,
     };
