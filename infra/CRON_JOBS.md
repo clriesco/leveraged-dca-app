@@ -73,14 +73,18 @@ The keep-alive workflow runs every 10 minutes and pings the `/api/health` endpoi
 
 ### Daily Jobs Workflow
 
-The daily jobs workflow runs three jobs at different times:
+The daily jobs workflow runs all three update scripts every 30 minutes in sequence:
 
-- **6:00 AM UTC** - Price Ingestion
-- **7:00 AM UTC** - Metrics Refresh
-- **9:00 AM UTC** - Daily Check
+1. **Price Ingestion** - Fetches latest prices from Yahoo Finance
+2. **Metrics Refresh** - Recalculates portfolio metrics (runs after price ingestion)
+3. **Daily Check** - Generates recommendations and alerts (runs after metrics refresh)
+
+**Schedule:** Every 30 minutes (`*/30 * * * *`)
+
+**Execution order:** Jobs run sequentially (price-ingestion → metrics-refresh → daily-check) to ensure data consistency.
 
 **Manual trigger:** Available via GitHub Actions UI with job selection:
-- `all` - Run all three jobs
+- `all` - Run all three jobs in sequence
 - `prices` - Run only price ingestion
 - `metrics` - Run only metrics refresh
 - `daily-check` - Run only daily check
