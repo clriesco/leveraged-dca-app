@@ -102,8 +102,13 @@ jobs:
           API_URL=http://localhost:3003/api
           EOF
 
-      - name: Generate Prisma Client
+      - name: Generate Prisma Client for backend
         run: npm --workspace apps/backend run prisma:generate
+
+      - name: Generate Prisma Client for infra/scripts
+        run: |
+          cd infra/scripts
+          npx prisma generate --schema=../../apps/backend/prisma/schema.prisma
 
       - name: Run database migrations
         run: npx --workspace apps/backend prisma db push --skip-generate

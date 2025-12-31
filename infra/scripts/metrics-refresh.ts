@@ -30,7 +30,7 @@ async function calculateMetrics(portfolioId: string, date: Date) {
 
   // Get latest prices for all assets
   const assetPrices = await Promise.all(
-    positions.map(async (pos) => {
+    positions.map(async (pos: typeof positions[0]) => {
       const latestPrice = await prisma.assetPrice.findFirst({
         where: {
           assetId: pos.assetId,
@@ -111,7 +111,7 @@ async function calculateMetrics(portfolioId: string, date: Date) {
 
   // Filter to find contributions NOT yet processed
   const newContributions = allContributions.filter(
-    (c) => !processedContributionIds.has(c.id)
+    (c: typeof allContributions[0]) => !processedContributionIds.has(c.id)
   );
 
   let contributionsSinceLastMetric = newContributions.reduce(
@@ -141,7 +141,7 @@ async function calculateMetrics(portfolioId: string, date: Date) {
   } else if (allContributions.length > 0) {
     // No previous metrics but we have contributions - process all of them
     contributionsSinceLastMetric = allContributions.reduce(
-      (sum, c) => sum + c.amount,
+      (sum: number, c: typeof allContributions[0]) => sum + c.amount,
       0
     );
     console.log(
@@ -262,7 +262,7 @@ async function calculateMetrics(portfolioId: string, date: Date) {
   }
 
   // Calculate current portfolio composition
-  const composition = positions.map((pos) => {
+  const composition = positions.map((pos: typeof positions[0]) => {
     const currentPrice = priceMap.get(pos.assetId) || pos.avgPrice;
     const value = pos.quantity * currentPrice;
     const weight = totalExposure > 0 ? value / totalExposure : 0;
