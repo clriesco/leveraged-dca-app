@@ -3,8 +3,9 @@ name: Keep Alive
 on:
   schedule:
     # Run every 10 minutes to keep Render service awake
+    # Note: GitHub Actions may take up to 1 hour to activate scheduled workflows
     - cron: "*/10 * * * *"
-  workflow_dispatch: # Allow manual trigger
+  workflow_dispatch: # Allow manual trigger (use this to test immediately)
 
 jobs:
   ping:
