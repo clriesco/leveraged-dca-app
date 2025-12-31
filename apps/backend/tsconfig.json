@@ -2,10 +2,13 @@
   "extends": "../../tsconfig.base.json",
   "compilerOptions": {
     "rootDir": "src",
-    "outDir": "dist",
+    "outDir": "./dist",
     "incremental": true,
     "experimentalDecorators": true,
-    "emitDecoratorMetadata": true
+    "emitDecoratorMetadata": true,
+    "noEmit": false,
+    "baseUrl": ".",
+
   },
   "include": ["src"],
   "exclude": ["node_modules", "dist"]
