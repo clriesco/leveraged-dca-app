@@ -20,9 +20,9 @@ export class CronService {
     this.logger.log("🔄 Starting price ingestion...");
 
     try {
-      // Import the ingestion logic dynamically
-      const priceIngestionModule = await import("../../../../infra/scripts/price-ingestion");
-      
+      // Import the ingestion logic dynamically using require to avoid TypeScript compilation issues
+      const priceIngestionModule = require("../../../../infra/scripts/price-ingestion");
+
       // The script creates its own PrismaClient, but we can still use it
       // The script will handle its own connection/disconnection
       await priceIngestionModule.ingestPrices();
@@ -46,9 +46,9 @@ export class CronService {
     this.logger.log("🔄 Starting metrics refresh...");
 
     try {
-      // Import the refresh logic dynamically
-      const metricsRefreshModule = await import("../../../../infra/scripts/metrics-refresh");
-      
+      // Import the refresh logic dynamically using require to avoid TypeScript compilation issues
+      const metricsRefreshModule = require("../../../../infra/scripts/metrics-refresh");
+
       await metricsRefreshModule.refreshMetrics();
 
       this.logger.log("✅ Metrics refresh completed successfully");
@@ -70,9 +70,9 @@ export class CronService {
     this.logger.log("🔍 Starting daily check...");
 
     try {
-      // Import the daily check logic dynamically
-      const dailyCheckModule = await import("../../../../infra/scripts/daily-check");
-      
+      // Import the daily check logic dynamically using require to avoid TypeScript compilation issues
+      const dailyCheckModule = require("../../../../infra/scripts/daily-check");
+
       const result = await dailyCheckModule.runDailyCheck();
 
       this.logger.log(
@@ -88,4 +88,3 @@ export class CronService {
     }
   }
 }
-
