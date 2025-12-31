@@ -20,14 +20,14 @@ jobs:
           node-version: '20'
           cache: 'npm'
 
-      - name: Install dependencies
-        run: npm install
+      - name: Install all dependencies
+        run: npm ci
 
       - name: Generate Prisma Client
         run: npm --workspace apps/backend run prisma:generate
 
-      - name: Lint
-        run: npm run lint
+      - name: Lint backend only
+        run: npm --workspace apps/backend run lint
 
       - name: Test
         run: npm run test

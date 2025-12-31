@@ -3,6 +3,7 @@
   "version": "0.1.0",
   "private": true,
   "scripts": {
+    "prisma:generate": "prisma generate --schema=../../apps/backend/prisma/schema.prisma",
     "seed:demo": "NODE_PATH=../../node_modules npx ts-node seed-demo-portfolio.ts",
     "prices:ingest": "NODE_PATH=../../node_modules npx ts-node price-ingestion.ts",
     "metrics:refresh": "NODE_PATH=../../node_modules npx ts-node metrics-refresh.ts",
