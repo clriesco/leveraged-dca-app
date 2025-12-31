@@ -12,6 +12,7 @@ import {
   TrendingUp,
   ChevronLeft,
   ChevronRight,
+  BookOpen,
 } from "lucide-react";
 
 /**
@@ -76,6 +77,12 @@ export default function DashboardSidebar({
       icon: User,
       path: "/dashboard/profile",
       color: "#c084fc",
+    },
+    {
+      label: "Ayuda",
+      icon: BookOpen,
+      path: "/dashboard/help",
+      color: "#60a5fa",
     },
   ];
 
