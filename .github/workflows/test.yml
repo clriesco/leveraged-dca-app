@@ -107,12 +107,24 @@ jobs:
 
       - name: Copy Prisma Client to infra/scripts
         run: |
-          # Prisma generates the client in the directory relative to where @prisma/client is installed
-          # Since backend already has the client generated, we copy it to infra/scripts
+          # In npm workspaces, Prisma Client is generated in root node_modules
           cd infra/scripts
           mkdir -p node_modules/.prisma/client
-          cp -r ../../apps/backend/node_modules/.prisma/client/* node_modules/.prisma/client/
-          echo "✅ Prisma Client copied to infra/scripts"
+          # Try root node_modules first (npm workspaces), then backend (if hoisted differently)
+          if [ -d "../../node_modules/.prisma/client" ]; then
+            cp -r ../../node_modules/.prisma/client/* node_modules/.prisma/client/
+            echo "✅ Prisma Client copied from root node_modules"
+          elif [ -d "../../apps/backend/node_modules/.prisma/client" ]; then
+            cp -r ../../apps/backend/node_modules/.prisma/client/* node_modules/.prisma/client/
+            echo "✅ Prisma Client copied from backend node_modules"
+          else
+            echo "❌ Prisma Client not found!"
+            echo "Checking root node_modules:"
+            ls -la ../../node_modules/.prisma/ 2>/dev/null || echo "  .prisma not in root"
+            echo "Checking backend node_modules:"
+            ls -la ../../apps/backend/node_modules/.prisma/ 2>/dev/null || echo "  .prisma not in backend"
+            exit 1
+          fi
 
       - name: Run database migrations
         run: npx --workspace apps/backend prisma db push --skip-generate
