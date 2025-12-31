@@ -12,7 +12,10 @@ export interface Position {
   id: string;
   quantity: number;
   avgPrice: number;
+  currentPrice: number;
   exposureUsd: number;
+  pnl: number;
+  pnlPercent: number;
   weight: number;
   asset: {
     id: string;
@@ -78,6 +81,32 @@ export async function fetchAPI(endpoint: string, options: RequestInit = {}) {
   });
 
   if (!response.ok) {
+    // Handle 401 Unauthorized - try to refresh token
+    if (response.status === 401) {
+      // Try to get fresh token from Supabase
+      try {
+        const { supabase } = await import("./supabase");
+        const { data: { session } } = await supabase.auth.getSession();
+        if (session?.access_token) {
+          localStorage.setItem("supabase_token", session.access_token);
+          // Retry the request with new token
+          const retryHeaders = {
+            ...headers,
+            Authorization: `Bearer ${session.access_token}`,
+          };
+          const retryResponse = await fetch(`${API_BASE_URL}${endpoint}`, {
+            ...options,
+            headers: retryHeaders,
+          });
+          if (retryResponse.ok) {
+            return retryResponse.json();
+          }
+        }
+      } catch (refreshError) {
+        console.error("Failed to refresh token:", refreshError);
+      }
+    }
+
     const error = await response
       .json()
       .catch(() => ({ message: "Network error" }));
@@ -588,4 +617,73 @@ export async function searchSymbols(
     return [];
   }
   return fetchAPI(`/positions/search-symbols?q=${encodeURIComponent(query)}`);
+}
+
+// ============================================
+// PORTFOLIO ONBOARDING
+// ============================================
+
+/**
+ * Asset for onboarding
+ */
+export interface OnboardingAsset {
+  symbol: string;
+  name?: string;
+  assetType?: string;
+  price?: number | null;
+}
+
+/**
+ * Create portfolio request
+ */
+export interface CreatePortfolioRequest {
+  name: string;
+  initialCapital: number;
+  baseCurrency?: string;
+  assets: OnboardingAsset[];
+  weightAllocationMethod: "sharpe" | "manual" | "equal";
+  targetWeights?: Record<string, number>;
+  leverageMin?: number;
+  leverageMax?: number;
+  leverageTarget?: number;
+  monthlyContribution?: number;
+  contributionFrequency?: "weekly" | "biweekly" | "monthly" | "quarterly";
+  contributionDayOfMonth?: number;
+  contributionEnabled?: boolean;
+}
+
+/**
+ * Create portfolio response
+ */
+export interface CreatePortfolioResponse {
+  portfolio: {
+    id: string;
+    name: string;
+    initialCapital: number;
+    baseCurrency: string;
+  };
+  assetsCreated: number;
+  historicalDataDownloaded: boolean;
+  targetWeights: Record<string, number>;
+  equalWeights: Record<string, number>;
+  warnings?: string[];
+}
+
+/**
+ * Create a new portfolio (onboarding)
+ */
+export async function createPortfolio(
+  data: CreatePortfolioRequest
+): Promise<CreatePortfolioResponse> {
+  return fetchAPI("/portfolios", {
+    method: "POST",
+    body: JSON.stringify(data),
+  });
+}
+
+/**
+ * Check if user needs onboarding
+ */
+export async function checkNeedsOnboarding(): Promise<{ needsOnboarding: boolean }> {
+  return fetchAPI("/portfolios/needs-onboarding");
 }

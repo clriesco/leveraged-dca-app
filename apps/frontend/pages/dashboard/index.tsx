@@ -15,7 +15,10 @@ interface Position {
   id: string;
   quantity: number;
   avgPrice: number;
+  currentPrice: number;
   exposureUsd: number;
+  pnl: number;
+  pnlPercent: number;
   weight: number;
   asset: {
     id: string;
@@ -144,6 +147,7 @@ function Dashboard() {
 
   const analyticsStats = summary?.analytics ?? null;
 
+  // All useEffect hooks must be before any conditional returns
   // Redirect if not authenticated
   useEffect(() => {
     if (!loading && !user) {
@@ -151,13 +155,14 @@ function Dashboard() {
     }
   }, [user, loading, router]);
 
-  // Check if portfolio exists
+  // Redirect to onboarding if no portfolio found
   useEffect(() => {
     if (!portfoliosLoading && portfolios.length === 0 && user) {
-      // Portfolio will be handled by error state below
+      router.push("/dashboard/onboarding");
     }
-  }, [portfoliosLoading, portfolios.length, user]);
+  }, [portfoliosLoading, portfolios.length, user, router]);
 
+  // Early returns after all hooks
   if (loading) {
     return (
       <>
@@ -182,40 +187,31 @@ function Dashboard() {
     return null;
   }
 
-  // Show error if no portfolio found
+  // Show loading while checking for portfolios or redirecting to onboarding
   if (!portfoliosLoading && portfolios.length === 0) {
     return (
       <>
         <Head>
-          <title>Error - Dashboard</title>
+          <title>Redirigiendo... - Dashboard</title>
         </Head>
-        <DashboardSidebar portfolioId={null}>
-          <div
-            style={{
-              display: "flex",
-              justifyContent: "center",
-              alignItems: "center",
-              minHeight: "100vh",
-              flexDirection: "column",
-              gap: "1rem",
-              padding: "2rem",
-            }}
-          >
-            <p style={{ color: "#ef4444", fontSize: "1rem" }}>
-              No se encontró portfolio. Por favor, contacta con soporte.
-            </p>
-          </div>
-        </DashboardSidebar>
+        <div
+          style={{
+            display: "flex",
+            justifyContent: "center",
+            alignItems: "center",
+            minHeight: "100vh",
+            flexDirection: "column",
+            gap: "1rem",
+            padding: "2rem",
+          }}
+        >
+          <p style={{ color: "#94a3b8", fontSize: "1rem" }}>
+            Redirigiendo al asistente de configuración...
+          </p>
+        </div>
       </>
     );
   }
-
-  // Function to manually refresh all data
-  const handleRefresh = () => {
-    refreshSummary();
-    refreshMetrics();
-    refreshRecommendations();
-  };
 
   return (
     <React.Fragment>
@@ -252,23 +248,6 @@ function Dashboard() {
                   {user.email}
                 </p>
               </div>
-              <button
-                onClick={handleRefresh}
-                disabled={dataLoading}
-                style={{
-                  padding: "0.5rem 1rem",
-                  background: "#1e293b",
-                  border: "1px solid #334155",
-                  borderRadius: "6px",
-                  color: "#e2e8f0",
-                  fontSize: "0.875rem",
-                  cursor: dataLoading ? "not-allowed" : "pointer",
-                  opacity: dataLoading ? 0.5 : 1,
-                }}
-                title="Actualizar datos"
-              >
-                {dataLoading ? "Actualizando..." : "🔄 Actualizar"}
-              </button>
             </div>
 
             {/* Loading State - Skeletons */}
@@ -1240,7 +1219,10 @@ function Dashboard() {
                           <th style={tableHeaderStyle}>Activo</th>
                           <th style={tableHeaderStyle}>Peso</th>
                           <th style={tableHeaderStyle}>Cantidad</th>
+                          <th style={tableHeaderStyle}>Precio Medio</th>
+                          <th style={tableHeaderStyle}>Precio Actual</th>
                           <th style={tableHeaderStyle}>Valor</th>
+                          <th style={tableHeaderStyle}>PNL</th>
                         </tr>
                       </thead>
                       <tbody>
@@ -1274,9 +1256,46 @@ function Dashboard() {
                             </td>
                             <td style={tableCellStyle}>
                               $
+                              {pos.avgPrice.toLocaleString(undefined, {
+                                minimumFractionDigits: 2,
+                                maximumFractionDigits: 2,
+                              })}
+                            </td>
+                            <td style={tableCellStyle}>
+                              $
+                              {pos.currentPrice.toLocaleString(undefined, {
+                                minimumFractionDigits: 2,
+                                maximumFractionDigits: 2,
+                              })}
+                            </td>
+                            <td style={tableCellStyle}>
+                              $
                               {pos.exposureUsd.toLocaleString(undefined, {
                                 maximumFractionDigits: 0,
                               })}
+                            </td>
+                            <td
+                              style={{
+                                ...tableCellStyle,
+                                color: pos.pnl >= 0 ? "#22c55e" : "#ef4444",
+                                fontWeight: "600",
+                              }}
+                            >
+                              <div>
+                                {pos.pnl >= 0 ? "+" : ""}$
+                                {pos.pnl.toLocaleString(undefined, {
+                                  maximumFractionDigits: 0,
+                                })}
+                              </div>
+                              <div
+                                style={{
+                                  fontSize: "0.75rem",
+                                  opacity: 0.8,
+                                }}
+                              >
+                                {pos.pnlPercent >= 0 ? "+" : ""}
+                                {pos.pnlPercent.toFixed(2)}%
+                              </div>
                             </td>
                           </tr>
                         ))}

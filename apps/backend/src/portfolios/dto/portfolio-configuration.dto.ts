@@ -31,8 +31,8 @@ export class UpdatePortfolioConfigurationDto {
 
   @IsOptional()
   @IsString()
-  @IsIn(['weekly', 'biweekly', 'monthly', 'quarterly'])
-  contributionFrequency?: 'weekly' | 'biweekly' | 'monthly' | 'quarterly';
+  @IsIn(["weekly", "biweekly", "monthly", "quarterly"])
+  contributionFrequency?: "weekly" | "biweekly" | "monthly" | "quarterly";
 
   @IsOptional()
   @IsNumber()
@@ -161,7 +161,7 @@ export interface PortfolioConfigurationResponse {
 
   // Contribution settings
   monthlyContribution: number | null;
-  contributionFrequency: 'weekly' | 'biweekly' | 'monthly' | 'quarterly';
+  contributionFrequency: "weekly" | "biweekly" | "monthly" | "quarterly";
   contributionDayOfMonth: number;
   contributionEnabled: boolean;
 
@@ -197,4 +197,3 @@ export interface PortfolioConfigurationResponse {
   // Metadata
   updatedAt: string;
 }
-

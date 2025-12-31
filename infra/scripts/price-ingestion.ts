@@ -6,6 +6,11 @@
  */
 
 import { PrismaClient } from "@prisma/client";
+import * as dotenv from "dotenv";
+import * as path from "path";
+
+// Load .env from backend directory
+dotenv.config({ path: path.resolve(__dirname, "../../apps/backend/.env") });
 
 const prisma = new PrismaClient();
 
@@ -24,7 +29,7 @@ async function fetchPrice(symbol: string): Promise<number | null> {
     const response = await fetch(
       `https://query1.finance.yahoo.com/v8/finance/chart/${symbol}?interval=1d&range=1d`
     );
-    const data = await response.json();
+    const data = (await response.json()) as any;
 
     if (data.chart?.result?.[0]?.meta?.regularMarketPrice) {
       return data.chart.result[0].meta.regularMarketPrice;
@@ -52,8 +57,9 @@ async function ingestPrices() {
       return;
     }
 
-    const today = new Date();
-    today.setHours(0, 0, 0, 0);
+    // Get today's date in UTC to avoid timezone issues
+    const now = new Date();
+    const today = new Date(Date.UTC(now.getUTCFullYear(), now.getUTCMonth(), now.getUTCDate()));
 
     let successCount = 0;
     let failCount = 0;

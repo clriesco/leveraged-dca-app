@@ -1,14 +1,91 @@
-import { Controller, Get, Param, Query, UseGuards } from "@nestjs/common";
+import {
+  Body,
+  Controller,
+  Get,
+  Header,
+  Param,
+  Post,
+  Query,
+  Res,
+  UseGuards,
+} from "@nestjs/common";
+import { Response } from "express";
 
 import { AuthGuard } from "../auth/auth.guard";
 import { CurrentUser } from "../auth/current-user.decorator";
 
+import { CreatePortfolioDto } from "./dto/create-portfolio.dto";
+import { OnboardingService } from "./onboarding.service";
 import { PortfoliosService } from "./portfolios.service";
 
 @Controller("portfolios")
 @UseGuards(AuthGuard)
 export class PortfoliosController {
-  constructor(private readonly portfoliosService: PortfoliosService) {}
+  constructor(
+    private readonly portfoliosService: PortfoliosService,
+    private readonly onboardingService: OnboardingService
+  ) {}
+
+  /**
+   * Create a new portfolio (onboarding) with SSE progress
+   * POST /api/portfolios
+   * Returns Server-Sent Events stream with progress updates
+   */
+  @Post()
+  @Header("Content-Type", "text/event-stream")
+  @Header("Cache-Control", "no-cache")
+  @Header("Connection", "keep-alive")
+  async create(
+    @Body() dto: CreatePortfolioDto,
+    @CurrentUser() user: any,
+    @Res() res: Response
+  ) {
+    // Set up SSE headers
+    res.setHeader("Content-Type", "text/event-stream");
+    res.setHeader("Cache-Control", "no-cache");
+    res.setHeader("Connection", "keep-alive");
+    res.setHeader("X-Accel-Buffering", "no"); // Disable nginx buffering
+
+    // Send initial connection message
+    res.write(`data: ${JSON.stringify({ type: "connected", message: "Starting portfolio creation..." })}\n\n`);
+
+    try {
+      // Create portfolio with progress callback
+      const result = await this.onboardingService.createPortfolioWithAssets(
+        user.id,
+        dto,
+        (progress) => {
+          // Send progress event via SSE
+          res.write(`data: ${JSON.stringify(progress)}\n\n`);
+        }
+      );
+
+      // Send final success message
+      res.write(
+        `data: ${JSON.stringify({ type: "complete", result })}\n\n`
+      );
+    } catch (error) {
+      // Send error message
+      res.write(
+        `data: ${JSON.stringify({
+          type: "error",
+          message: error instanceof Error ? error.message : "Unknown error",
+        })}\n\n`
+      );
+    } finally {
+      res.end();
+    }
+  }
+
+  /**
+   * Check if user needs onboarding (has no portfolios)
+   * GET /api/portfolios/needs-onboarding
+   */
+  @Get("needs-onboarding")
+  async needsOnboarding(@CurrentUser() user: any) {
+    const hasPortfolio = await this.onboardingService.userHasPortfolio(user.id);
+    return { needsOnboarding: !hasPortfolio };
+  }
 
   /**
    * Get portfolios by user email

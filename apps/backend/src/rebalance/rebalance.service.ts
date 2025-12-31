@@ -1085,7 +1085,54 @@ export class RebalanceService {
       delta: pos.deltaValue,
       action: pos.action,
     }));
-    const metadata = {
+
+    // Get today's date in UTC to avoid timezone issues
+    const now = new Date();
+    const today = new Date(Date.UTC(now.getUTCFullYear(), now.getUTCMonth(), now.getUTCDate()));
+    
+    // Get existing metric to preserve metadata arrays
+    const existingMetric = await this.prisma.metricsTimeseries.findFirst({
+      where: {
+        portfolioId,
+        date: today,
+      },
+    });
+
+    // Build metadata: add rebalance to rebalances array, preserve other arrays
+    let metadata: any = {
+      source: "rebalance",
+      updatedAt: new Date().toISOString(),
+    };
+
+    if (existingMetric && existingMetric.metadataJson) {
+      try {
+        const existingMetadata = JSON.parse(existingMetric.metadataJson);
+        // Preserve existing arrays
+        if (existingMetadata.contributions) {
+          metadata.contributions = existingMetadata.contributions;
+        }
+        if (existingMetadata.rebalances) {
+          metadata.rebalances = existingMetadata.rebalances;
+        } else {
+          metadata.rebalances = [];
+        }
+        if (existingMetadata.manualUpdates) {
+          metadata.manualUpdates = existingMetadata.manualUpdates;
+        }
+        // Preserve other fields
+        if (existingMetadata.source) {
+          metadata.source = existingMetadata.source;
+        }
+      } catch {
+        // If parsing fails, start fresh
+        metadata.rebalances = [];
+      }
+    } else {
+      metadata.rebalances = [];
+    }
+
+    // Add new rebalance to the array
+    metadata.rebalances.push({
       pnl,
       pnlPercent,
       contribution: proposal.pendingContribution,
@@ -1096,12 +1143,9 @@ export class RebalanceService {
       weightsUsed: proposal.weightsUsed,
       dynamicWeights: proposal.dynamicWeightsComputed,
       composition,
-    };
+      rebalancedAt: new Date().toISOString(),
+    });
 
-    // Get today's date in UTC to avoid timezone issues
-    const now = new Date();
-    const today = new Date(Date.UTC(now.getUTCFullYear(), now.getUTCMonth(), now.getUTCDate()));
-    
     // Use upsert to avoid unique constraint errors if entry already exists for today
     await this.prisma.metricsTimeseries.upsert({
       where: {

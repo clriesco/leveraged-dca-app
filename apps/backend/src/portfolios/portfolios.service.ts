@@ -171,11 +171,20 @@ export class PortfoliosService {
       orderBy: { date: "asc" },
     });
 
-    // Calculate total contributions (all)
-    const totalContributions = portfolio.contributions.reduce(
+    // Calculate total contributions (all) - includes initial capital
+    const contributionsSum = portfolio.contributions.reduce(
       (sum: number, c: any) => sum + c.amount,
       0
     );
+    // Total invested = initial capital + all contributions
+    const totalContributions = (portfolio.initialCapital || 0) + contributionsSum;
+    
+    // Debug logging
+    console.log(`[PortfoliosService] getSummary for portfolio ${portfolioId}:`);
+    console.log(`  - initialCapital: ${portfolio.initialCapital}`);
+    console.log(`  - contributions count: ${portfolio.contributions.length}`);
+    console.log(`  - contributionsSum: ${contributionsSum}`);
+    console.log(`  - totalContributions: ${totalContributions}`);
 
     // Calculate pending contributions (not deployed) - for display only
     // NOTE: Contributions are now marked as deployed immediately when registered,
@@ -184,13 +193,24 @@ export class PortfoliosService {
       .filter((c: any) => !c.deployed)
       .reduce((sum: number, c: any) => sum + c.amount, 0);
 
-    // Base equity from metrics (should already include all deployed contributions)
-    // We do NOT add pendingContributions here because:
-    // 1. If contributions are marked as deployed, they're already in equity
-    // 2. If they're not marked as deployed, it's a bug that needs fixing
-    // 3. Adding them here would cause equity to accumulate on every page load
-    const effectiveEquity =
-      latestDailyMetric?.equity ?? latestMetrics?.equity ?? 0;
+    // EQUITY CALCULATION STRATEGY:
+    // The equity is the user's actual capital in the portfolio, NOT derived from exposure/borrowedAmount.
+    // We trust the stored equity from DailyMetric (most recent) or MetricsTimeseries.
+    // This is the value that the user confirmed during manual updates or that was set during contributions.
+    //
+    // IMPORTANT: We do NOT recalculate equity from exposure - borrowedAmount because:
+    // 1. borrowedAmount may be stale if prices changed
+    // 2. This would cause inconsistencies with what the user confirmed
+    // 3. Contributions are already included in the stored equity value
+    
+    // Use the stored equity value directly - this is the source of truth
+    const effectiveEquity = latestDailyMetric?.equity ?? latestMetrics?.equity ?? portfolio.initialCapital;
+    
+    console.log(`[getSummary] Equity calculation:`);
+    console.log(`  - latestDailyMetric?.equity: ${latestDailyMetric?.equity ?? 'null'}`);
+    console.log(`  - latestMetrics?.equity: ${latestMetrics?.equity ?? 'null'}`);
+    console.log(`  - portfolio.initialCapital: ${portfolio.initialCapital}`);
+    console.log(`  - effectiveEquity: ${effectiveEquity}`);
 
     // Calculate exposure in REAL-TIME from current positions and latest prices
     // This ensures accuracy even if metrics are outdated
@@ -227,6 +247,8 @@ export class PortfoliosService {
     // Calculate leverage using effective equity and real-time exposure
     const currentLeverage =
       effectiveEquity > 0 ? currentExposure / effectiveEquity : 0;
+    
+    console.log(`[getSummary] Final equity: ${effectiveEquity}, exposure: ${currentExposure}, leverage: ${currentLeverage}`);
 
     // NOTE: We do NOT update DailyMetric here - this is a read-only operation
     // DailyMetric should only be updated by:
@@ -241,13 +263,22 @@ export class PortfoliosService {
         ? ((effectiveEquity - totalContributions) / totalContributions) * 100
         : 0;
 
-    // Calculate position weights using real-time exposure
+    // Calculate position weights, PNL, and current prices using real-time exposure
     const positionsWithWeights = portfolio.positions.map((pos: any) => {
-      const price = latestPrices[pos.assetId] || pos.avgPrice;
-      const currentValue = pos.quantity * price;
+      const currentPrice = latestPrices[pos.assetId] || pos.avgPrice;
+      const currentValue = pos.quantity * currentPrice;
+      const pnl = (currentPrice - pos.avgPrice) * pos.quantity;
+      const pnlPercent =
+        pos.avgPrice > 0
+          ? ((currentPrice - pos.avgPrice) / pos.avgPrice) * 100
+          : 0;
+
       return {
         ...pos,
+        currentPrice, // Current market price
         exposureUsd: currentValue, // Use real-time value
+        pnl, // Profit/Loss in USD
+        pnlPercent, // Profit/Loss percentage
         weight:
           currentExposure > 0 ? (currentValue / currentExposure) * 100 : 0,
       };
@@ -259,6 +290,8 @@ export class PortfoliosService {
       totalContributions,
       portfolio.initialCapital
     );
+
+    console.log(`[getSummary] Analytics result - capitalFinal: ${analytics.capitalFinal}, totalInvested: ${analytics.totalInvested}`);
 
     return {
       portfolio: {
@@ -324,7 +357,12 @@ export class PortfoliosService {
   ) {
     const dailyHistory = this.buildDailyHistory(metricsHistory);
 
-    if (dailyHistory.length < 2) {
+    console.log(`[calculatePortfolioAnalytics] Metrics history length: ${metricsHistory.length}`);
+    console.log(`[calculatePortfolioAnalytics] Daily history length: ${dailyHistory.length}`);
+    console.log(`[calculatePortfolioAnalytics] Total contributions: ${totalContributions}`);
+
+    if (dailyHistory.length === 0) {
+      console.warn(`[calculatePortfolioAnalytics] No daily history, returning zeros`);
       return {
         capitalFinal: 0,
         totalInvested: totalContributions,
@@ -339,6 +377,33 @@ export class PortfoliosService {
         bestDay: null,
         worstDay: null,
       };
+    }
+
+    // If only one entry, use it as both first and last
+    if (dailyHistory.length < 2) {
+      const singleEntry = dailyHistory[0];
+      console.log(`[calculatePortfolioAnalytics] Only one entry, equity: ${singleEntry.equity}`);
+      const absoluteReturn = singleEntry.equity - totalContributions;
+      const totalReturnPercent =
+        totalContributions > 0 ? (absoluteReturn / totalContributions) * 100 : 0;
+      
+      const result = {
+        capitalFinal: singleEntry.equity,
+        totalInvested: totalContributions,
+        absoluteReturn,
+        totalReturnPercent,
+        cagr: 0,
+        volatility: 0,
+        sharpe: 0,
+        maxDrawdownEquity: 0,
+        maxDrawdownExposure: 0,
+        underwaterDays: singleEntry.equity < totalContributions ? 1 : 0,
+        bestDay: null,
+        worstDay: null,
+      };
+      
+      console.log(`[calculatePortfolioAnalytics] Returning result with capitalFinal: ${result.capitalFinal}`);
+      return result;
     }
 
     const contributionsByDate = new Map<string, number>();
@@ -359,6 +424,10 @@ export class PortfoliosService {
     const firstEntry =
       firstValidIndex >= 0 ? dailyHistory[firstValidIndex] : dailyHistory[0];
     const lastEntry = dailyHistory[dailyHistory.length - 1];
+    
+    console.log(`[calculatePortfolioAnalytics] First entry equity: ${firstEntry.equity}, date: ${firstEntry.date}`);
+    console.log(`[calculatePortfolioAnalytics] Last entry equity: ${lastEntry.equity}, date: ${lastEntry.date}`);
+    
     const absoluteReturn = lastEntry.equity - totalContributions;
     const totalReturnPercent =
       totalContributions > 0 ? (absoluteReturn / totalContributions) * 100 : 0;
@@ -423,7 +492,7 @@ export class PortfoliosService {
     }
 
     if (dailyReturns.length === 0) {
-      return {
+      const result = {
         capitalFinal: lastEntry.equity,
         totalInvested: totalContributions,
         absoluteReturn,
@@ -437,6 +506,8 @@ export class PortfoliosService {
         bestDay: null,
         worstDay: null,
       };
+      console.log(`[calculatePortfolioAnalytics] Returning result (no returns) with capitalFinal: ${result.capitalFinal}`);
+      return result;
     }
 
     const meanReturn =
@@ -454,7 +525,7 @@ export class PortfoliosService {
     const sharpe =
       volatility > 0 ? (meanReturn * 252 - RISK_FREE_RATE) / volatility : 0;
 
-    return {
+    const result = {
       capitalFinal: lastEntry.equity,
       totalInvested: totalContributions,
       absoluteReturn,
@@ -474,6 +545,9 @@ export class PortfoliosService {
           ? { date: worstDate, return: worstReturn }
           : null,
     };
+    
+    console.log(`[calculatePortfolioAnalytics] Returning result (with returns) with capitalFinal: ${result.capitalFinal}`);
+    return result;
   }
 
   private async executeWithRetry<T>(

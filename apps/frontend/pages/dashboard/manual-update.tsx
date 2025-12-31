@@ -619,38 +619,43 @@ export default function ManualUpdate() {
                           </div>
                         )}
                         
-                        <input
-                          type="number"
-                          step={pos.assetSymbol ? getAssetPrecision(pos.assetSymbol).step : "0.0001"}
-                          min="0"
-                          value={pos.quantity}
-                          onChange={(e) => handlePositionChange(originalIdx, e.target.value)}
-                      placeholder="Cantidad"
-                      disabled={isSubmitting || !!(pos.assetId && parseFloat(pos.quantity) === 0)}
-                      style={{
-                        width: "100%",
-                        padding: "0.75rem 1rem",
-                        background: pos.assetId && parseFloat(pos.quantity) === 0 
-                          ? "rgba(239, 68, 68, 0.1)" 
-                          : "rgba(255, 255, 255, 0.1)",
-                        color: pos.assetId && parseFloat(pos.quantity) === 0 
-                          ? "rgba(255, 255, 255, 0.5)" 
-                          : "white",
-                        border: pos.assetId && parseFloat(pos.quantity) === 0
-                          ? "2px solid rgba(239, 68, 68, 0.4)"
-                          : "2px solid rgba(255, 255, 255, 0.2)",
-                        borderRadius: "8px",
-                        fontSize: "1rem",
-                        boxSizing: "border-box",
-                        marginBottom: "0.75rem",
-                        textDecoration: pos.assetId && parseFloat(pos.quantity) === 0 ? "line-through" : "none",
-                      }}
-                    />
-                    {pos.assetId && parseFloat(pos.quantity) === 0 && (
-                      <p style={{ color: "#f87171", fontSize: "0.75rem", marginTop: "0.25rem", fontWeight: "500" }}>
-                        ⚠️ Este activo se eliminará al guardar
-                      </p>
-                    )}
+                        {/* Only show quantity input for existing assets */}
+                        {pos.assetId && (
+                          <>
+                            <input
+                              type="number"
+                              step={pos.assetSymbol ? getAssetPrecision(pos.assetSymbol).step : "0.0001"}
+                              min="0"
+                              value={pos.quantity}
+                              onChange={(e) => handlePositionChange(originalIdx, e.target.value)}
+                              placeholder="Cantidad"
+                              disabled={isSubmitting || parseFloat(pos.quantity) === 0}
+                              style={{
+                                width: "100%",
+                                padding: "0.75rem 1rem",
+                                background: parseFloat(pos.quantity) === 0 
+                                  ? "rgba(239, 68, 68, 0.1)" 
+                                  : "rgba(255, 255, 255, 0.1)",
+                                color: parseFloat(pos.quantity) === 0 
+                                  ? "rgba(255, 255, 255, 0.5)" 
+                                  : "white",
+                                border: parseFloat(pos.quantity) === 0
+                                  ? "2px solid rgba(239, 68, 68, 0.4)"
+                                  : "2px solid rgba(255, 255, 255, 0.2)",
+                                borderRadius: "8px",
+                                fontSize: "1rem",
+                                boxSizing: "border-box",
+                                marginBottom: "0.75rem",
+                                textDecoration: parseFloat(pos.quantity) === 0 ? "line-through" : "none",
+                              }}
+                            />
+                            {parseFloat(pos.quantity) === 0 && (
+                              <p style={{ color: "#f87171", fontSize: "0.75rem", marginTop: "0.25rem", fontWeight: "500" }}>
+                                ⚠️ Este activo se eliminará al guardar
+                              </p>
+                            )}
+                          </>
+                        )}
 
                     {/* Info message for new assets */}
                     {!pos.assetId && pos.assetSymbol && (

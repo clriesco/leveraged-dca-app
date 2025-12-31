@@ -170,7 +170,6 @@ The schema is located at `apps/backend/prisma/schema.prisma`. Main models:
 - `note` (String?) - Optional note
 - **Deployment Tracking:**
   - `deployed` (Boolean, default: false) - Whether it was deployed
-  - `deployedAt` (DateTime?) - Deployment date
   - `deployedAmount` (Float, default: 0) - Deployed amount (can be partial)
   - `deploymentReason` (String?) - Reason: 'drawdown', 'weight_deviation', 'volatility', 'manual', 'leverage_low'
 - Relations: `portfolio`, `rebalanceEvents`

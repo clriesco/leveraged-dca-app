@@ -20,16 +20,26 @@ export class AuthGuard implements CanActivate {
     const authHeader = request.headers.authorization;
 
     if (!authHeader || !authHeader.startsWith("Bearer ")) {
+      console.error("[AuthGuard] No authorization header found");
       throw new UnauthorizedException("No token provided");
     }
 
     const token = authHeader.substring(7);
+    
+    if (!token || token.length === 0) {
+      console.error("[AuthGuard] Token is empty");
+      throw new UnauthorizedException("No token provided");
+    }
+
+    console.log(`[AuthGuard] Verifying token (length: ${token.length})`);
     const user = await this.authService.verifySession(token);
 
     if (!user) {
+      console.error("[AuthGuard] Token verification failed - invalid or expired token");
       throw new UnauthorizedException("Invalid or expired token");
     }
 
+    console.log(`[AuthGuard] Token verified successfully for user: ${user.email}`);
     // Attach user to request for use in controllers
     request.user = user;
 

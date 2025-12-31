@@ -2,6 +2,7 @@ import { Module } from "@nestjs/common";
 
 import { AuthModule } from "../auth/auth.module";
 
+import { OnboardingService } from "./onboarding.service";
 import { PortfolioConfigurationController } from "./portfolio-configuration.controller";
 import { PortfolioConfigurationService } from "./portfolio-configuration.service";
 import { PortfolioRecommendationsController } from "./portfolio-recommendations.controller";
@@ -21,11 +22,13 @@ import { PortfoliosService } from "./portfolios.service";
     PortfoliosService,
     PortfolioConfigurationService,
     PortfolioRecommendationsService,
+    OnboardingService,
   ],
   exports: [
     PortfoliosService,
     PortfolioConfigurationService,
     PortfolioRecommendationsService,
+    OnboardingService,
   ],
 })
 export class PortfoliosModule {}

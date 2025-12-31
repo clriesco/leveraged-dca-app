@@ -233,6 +233,46 @@ export class PositionsService {
         exposure += position.quantity * price;
       }
 
+      // Get previous equity to detect changes
+      const previousMetrics = await this.prisma.metricsTimeseries.findFirst({
+        where: { portfolioId: dto.portfolioId },
+        orderBy: { date: 'desc' },
+      });
+      const previousEquity = previousMetrics?.equity || 0;
+      const equityDelta = dto.equity - previousEquity;
+
+      // If equity increased, create an implicit contribution to track the capital injection
+      // This prevents manual equity increases from appearing as "returns"
+      if (equityDelta > 0) {
+        console.log(`[PositionsService] Manual equity increase detected: $${previousEquity.toFixed(2)} → $${dto.equity.toFixed(2)} (delta: +$${equityDelta.toFixed(2)})`);
+        console.log(`[PositionsService] Creating implicit contribution of $${equityDelta.toFixed(2)} to track capital injection`);
+        
+        await this.prisma.monthlyContribution.create({
+          data: {
+            portfolioId: dto.portfolioId,
+            amount: equityDelta,
+            contributedAt: new Date(),
+            deployed: true,
+            note: `Ajuste manual de equity (+$${equityDelta.toFixed(2)})`,
+          },
+        });
+      } else if (equityDelta < 0) {
+        // Equity decreased - this could be a withdrawal or loss correction
+        // We create a negative contribution to track the capital withdrawal
+        console.log(`[PositionsService] Manual equity decrease detected: $${previousEquity.toFixed(2)} → $${dto.equity.toFixed(2)} (delta: $${equityDelta.toFixed(2)})`);
+        console.log(`[PositionsService] Creating implicit negative contribution of $${equityDelta.toFixed(2)} to track capital withdrawal`);
+        
+        await this.prisma.monthlyContribution.create({
+          data: {
+            portfolioId: dto.portfolioId,
+            amount: equityDelta, // Negative value
+            contributedAt: new Date(),
+            deployed: true,
+            note: `Ajuste manual de equity ($${equityDelta.toFixed(2)})`,
+          },
+        });
+      }
+
       // Calculate borrowed amount: exposure - equity
       const borrowedAmount = exposure - dto.equity;
       
@@ -341,6 +381,69 @@ export class PositionsService {
         });
       }
 
+      // Get positions with asset relation for composition calculation
+      const positionsWithAssets = await this.prisma.portfolioPosition.findMany({
+        where: { portfolioId: dto.portfolioId },
+        include: { asset: true },
+      });
+
+      // Calculate current portfolio composition
+      const composition = positionsWithAssets.map((pos: any) => {
+        const price = latestPrices[pos.assetId] || pos.avgPrice;
+        const value = pos.quantity * price;
+        const weight = exposure > 0 ? value / exposure : 0;
+        
+        return {
+          symbol: pos.asset.symbol,
+          name: pos.asset.name,
+          weight,
+          value,
+          quantity: pos.quantity,
+        };
+      });
+
+      // Build metadata - add manual update to manualUpdates array, preserve other arrays
+      let metadata: any = {
+        source: 'manual_update',
+        updatedAt: new Date().toISOString(),
+        composition,
+      };
+
+      if (existingMetric && existingMetric.metadataJson) {
+        try {
+          const existingMetadata = JSON.parse(existingMetric.metadataJson);
+          // Preserve existing arrays
+          if (existingMetadata.contributions) {
+            metadata.contributions = existingMetadata.contributions;
+          }
+          if (existingMetadata.rebalances) {
+            metadata.rebalances = existingMetadata.rebalances;
+          }
+          if (existingMetadata.manualUpdates) {
+            metadata.manualUpdates = existingMetadata.manualUpdates;
+          } else {
+            metadata.manualUpdates = [];
+          }
+          // NOTE: DO NOT preserve source - we want source = "manual_update" for this update
+          // This allows metrics-refresh to know the equity was set manually
+        } catch (e) {
+          // If parsing fails, start fresh
+          metadata.manualUpdates = [];
+          console.warn(`[PositionsService] Failed to parse existing metadata: ${e}`);
+        }
+      } else {
+        metadata.manualUpdates = [];
+      }
+
+      // Add new manual update to the array
+      metadata.manualUpdates.push({
+        equity: dto.equity,
+        exposure,
+        leverage,
+        composition,
+        updatedAt: new Date().toISOString(),
+      });
+
       if (existingMetric) {
         // Update existing entry for today
         // Use the existing date to preserve the original date value
@@ -353,10 +456,7 @@ export class PositionsService {
             drawdown,
             marginRatio,
             borrowedAmount,
-            metadataJson: JSON.stringify({
-              source: 'manual_update',
-              updatedAt: new Date().toISOString(),
-            }),
+            metadataJson: JSON.stringify(metadata),
           },
         });
       } else {
@@ -371,10 +471,7 @@ export class PositionsService {
             leverage,
             drawdown,
             marginRatio,
-            metadataJson: JSON.stringify({
-              source: 'manual_update',
-              updatedAt: new Date().toISOString(),
-            }),
+            metadataJson: JSON.stringify(metadata),
           },
         });
       }
@@ -477,7 +574,7 @@ export class PositionsService {
 
   /**
    * Download historical prices for an asset (needed for Sharpe optimization)
-   * Downloads last 252 days (1 year) of daily prices
+   * Downloads last 730 days (24+ months) of daily prices for robust Sharpe calculation
    */
   private async downloadHistoricalPrices(
     assetId: string,
@@ -488,7 +585,7 @@ export class PositionsService {
     try {
       const endDate = new Date();
       const startDate = new Date();
-      startDate.setDate(startDate.getDate() - 252); // 1 year of data
+      startDate.setDate(startDate.getDate() - 730); // 24+ months of data for Sharpe optimization
 
       const startTs = Math.floor(startDate.getTime() / 1000);
       const endTs = Math.floor(endDate.getTime() / 1000);

@@ -44,34 +44,54 @@ export class AuthService {
   /**
    * Verify user session token
    * Decodes JWT token and finds user in local database by email
+   * Creates user if they don't exist (for users who login directly via magic link)
    * This avoids making HTTP calls to Supabase API
    * @param token - JWT token from client
    * @returns User data if valid, null otherwise
    */
   async verifySession(token: string) {
     try {
+      console.log(`[AuthService] Verifying token (length: ${token.length})`);
+      
       // Decode JWT token (no verification needed - token comes from trusted frontend)
       const decoded = jwt.decode(token) as any;
       
-      if (!decoded || !decoded.email) {
-        console.error("Invalid token: missing email claim");
+      if (!decoded) {
+        console.error("[AuthService] Failed to decode token");
+        return null;
+      }
+
+      console.log(`[AuthService] Token decoded, email: ${decoded.email}, exp: ${decoded.exp}`);
+      
+      if (!decoded.email) {
+        console.error("[AuthService] Invalid token: missing email claim");
         return null;
       }
 
       // Check token expiration
-      if (decoded.exp && decoded.exp < Date.now() / 1000) {
-        console.error("Token expired");
+      const now = Date.now() / 1000;
+      if (decoded.exp && decoded.exp < now) {
+        const expiredSeconds = now - decoded.exp;
+        console.error(`[AuthService] Token expired ${expiredSeconds.toFixed(0)} seconds ago`);
         return null;
       }
 
-      // Find user by email in our database (email is unique and matches Supabase)
-      const user = await this.prisma.user.findUnique({
+      // Find or create user by email in our database
+      // This handles the case where user logs in directly via magic link
+      // without going through /auth/login endpoint
+      let user = await this.prisma.user.findUnique({
         where: { email: decoded.email },
       });
       
       if (!user) {
-        console.error(`User not found in database by email: ${decoded.email}`);
-        return null;
+        console.log(`[AuthService] User not found in database, creating user for email: ${decoded.email}`);
+        // Create user if they don't exist (they authenticated via Supabase magic link)
+        user = await this.prisma.user.create({
+          data: { email: decoded.email },
+        });
+        console.log(`[AuthService] User created: ${user.id}`);
+      } else {
+        console.log(`[AuthService] User found: ${user.id} (${user.email})`);
       }
 
       return {
@@ -79,7 +99,10 @@ export class AuthService {
         email: user.email,
       } as any;
     } catch (err) {
-      console.error("Failed to verify session:", err);
+      console.error("[AuthService] Failed to verify session:", err);
+      if (err instanceof Error) {
+        console.error("[AuthService] Error details:", err.message, err.stack);
+      }
       return null;
     }
   }

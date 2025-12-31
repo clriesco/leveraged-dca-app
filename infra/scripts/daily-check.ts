@@ -10,8 +10,10 @@
 
 import { PrismaClient } from "@prisma/client";
 import * as dotenv from "dotenv";
+import * as path from "path";
 
-dotenv.config();
+// Load .env from backend directory
+dotenv.config({ path: path.resolve(__dirname, "../../apps/backend/.env") });
 
 const prisma = new PrismaClient();
 
@@ -37,7 +39,11 @@ interface PortfolioState {
 }
 
 interface Alert {
-  type: "contribution_due" | "leverage_low" | "leverage_high" | "margin_warning";
+  type:
+    | "contribution_due"
+    | "leverage_low"
+    | "leverage_high"
+    | "margin_warning";
   priority: "low" | "medium" | "high" | "urgent";
   message: string;
   actionRequired: boolean;
@@ -103,26 +109,59 @@ async function calculatePortfolioState(
   }
 
   // Get equity from latest metrics or calculate estimate
-  // Prefer using borrowedAmount when available for accurate calculation
+  // IMPORTANT: The equity in latestMetric already includes contributions up to that point
+  // We need to:
+  // 1. Start from the metric's equity (which includes contributions)
+  // 2. Adjust for price movements: new_equity_from_prices - old_equity_from_prices
+  // 3. Add new contributions made since the metric
   let equity = portfolio.initialCapital;
   let borrowedAmount: number | null = null;
 
   const latestMetric = await prisma.metricsTimeseries.findFirst({
     where: { portfolioId: portfolio.id },
     orderBy: { date: "desc" },
+    select: {
+      equity: true,
+      exposure: true,
+      borrowedAmount: true,
+      updatedAt: true, // Get exact timestamp when metric was last updated
+    },
   });
 
   if (latestMetric) {
-    equity = latestMetric.equity;
     borrowedAmount = latestMetric.borrowedAmount;
-    
-    // If we have borrowedAmount, recalculate equity from exposure
-    // This ensures accuracy: equity = exposure - borrowedAmount
-    if (borrowedAmount !== null) {
-      equity = exposure - borrowedAmount;
-    }
+
+    // Get contributions made AFTER the metric was last updated
+    const contributions = await prisma.monthlyContribution.findMany({
+      where: {
+        portfolioId: portfolio.id,
+        contributedAt: {
+          gt: latestMetric.updatedAt, // Greater than metric updatedAt (full timestamp comparison)
+        },
+      },
+    });
+
+    const contributionsSinceLastMetric = contributions.reduce(
+      (sum: number, c: any) => sum + c.amount,
+      0
+    );
+
+    // Equity from price movements at the time of the metric
+    const oldEquityFromPrices = latestMetric.exposure - (borrowedAmount || 0);
+
+    // Equity from price movements now
+    const newEquityFromPrices = exposure - (borrowedAmount || 0);
+
+    // Change in equity due to price movements
+    const equityChangeFromPrices = newEquityFromPrices - oldEquityFromPrices;
+
+    // Final equity = metric equity + price changes + new contributions
+    equity =
+      latestMetric.equity +
+      equityChangeFromPrices +
+      contributionsSinceLastMetric;
   } else {
-    // Estimate: use target leverage to back-calculate
+    // No previous metrics, estimate using target leverage
     const targetLeverage =
       portfolio.leverageTarget ||
       (portfolio.leverageMin + portfolio.leverageMax) / 2;
@@ -215,7 +254,9 @@ function generateAlerts(
     alerts.push({
       type: "contribution_due",
       priority: "medium",
-      message: `Hoy es tu día de aportación mensual. Aportación configurada: $${portfolio.monthlyContribution?.toLocaleString() || 0}`,
+      message: `Hoy es tu día de aportación mensual. Aportación configurada: $${
+        portfolio.monthlyContribution?.toLocaleString() || 0
+      }`,
       actionRequired: true,
     });
   }
@@ -225,7 +266,11 @@ function generateAlerts(
     alerts.push({
       type: "leverage_low",
       priority: "high",
-      message: `Leverage efectivo (${leverage.toFixed(2)}x) por debajo del mínimo (${portfolio.leverageMin}x). Considera aumentar exposición mediante reborrow.`,
+      message: `Leverage efectivo (${leverage.toFixed(
+        2
+      )}x) por debajo del mínimo (${
+        portfolio.leverageMin
+      }x). Considera aumentar exposición mediante reborrow.`,
       actionRequired: true,
     });
   }
@@ -238,7 +283,13 @@ function generateAlerts(
     alerts.push({
       type: "leverage_high",
       priority: "urgent",
-      message: `⚠️ URGENTE: Leverage efectivo (${leverage.toFixed(2)}x) por encima del máximo (${portfolio.leverageMax}x). Se requiere aporte extra de ~$${Math.ceil(extraNeeded).toLocaleString()} para reducir el riesgo.`,
+      message: `⚠️ URGENTE: Leverage efectivo (${leverage.toFixed(
+        2
+      )}x) por encima del máximo (${
+        portfolio.leverageMax
+      }x). Se requiere aporte extra de ~$${Math.ceil(
+        extraNeeded
+      ).toLocaleString()} para reducir el riesgo.`,
       actionRequired: true,
     });
   }
@@ -251,14 +302,20 @@ function generateAlerts(
     alerts.push({
       type: "margin_warning",
       priority: "urgent",
-      message: `⚠️ CRÍTICO: Ratio de margen (${(marginRatio * 100).toFixed(1)}%) cerca del nivel de mantenimiento. Riesgo de margin call inminente.`,
+      message: `⚠️ CRÍTICO: Ratio de margen (${(marginRatio * 100).toFixed(
+        1
+      )}%) cerca del nivel de mantenimiento. Riesgo de margin call inminente.`,
       actionRequired: true,
     });
   } else if (marginRatio <= safeMargin) {
     alerts.push({
       type: "margin_warning",
       priority: "high",
-      message: `Ratio de margen (${(marginRatio * 100).toFixed(1)}%) por debajo del nivel seguro (${(safeMargin * 100).toFixed(0)}%). Considera reducir exposición o aumentar colateral.`,
+      message: `Ratio de margen (${(marginRatio * 100).toFixed(
+        1
+      )}%) por debajo del nivel seguro (${(safeMargin * 100).toFixed(
+        0
+      )}%). Considera reducir exposición o aumentar colateral.`,
       actionRequired: true,
     });
   }
@@ -278,17 +335,18 @@ function logAlert(state: PortfolioState, alert: Alert): void {
   };
 
   const icon = priorityIcons[alert.priority] || "📌";
-  console.log(
-    `   ${icon} [${alert.priority.toUpperCase()}] ${alert.message}`
-  );
+  console.log(`   ${icon} [${alert.priority.toUpperCase()}] ${alert.message}`);
 }
 
 /**
  * Store daily check results in the database
  */
 async function storeDailyMetric(state: PortfolioState): Promise<void> {
-  const today = new Date();
-  today.setHours(0, 0, 0, 0);
+  // Get today's date in UTC to avoid timezone issues
+  const now = new Date();
+  const today = new Date(
+    Date.UTC(now.getUTCFullYear(), now.getUTCMonth(), now.getUTCDate())
+  );
 
   // Calculate peak equity from history
   const allMetrics = await prisma.metricsTimeseries.findMany({
@@ -375,9 +433,21 @@ async function runDailyCheck(): Promise<DailyCheckResult> {
       }
 
       // Log state
-      console.log(`   Equity: $${state.equity.toLocaleString(undefined, { maximumFractionDigits: 0 })}`);
-      console.log(`   Exposure: $${state.exposure.toLocaleString(undefined, { maximumFractionDigits: 0 })}`);
-      console.log(`   Leverage: ${state.leverage.toFixed(2)}x (range: ${state.leverageMin}x - ${state.leverageMax}x)`);
+      console.log(
+        `   Equity: $${state.equity.toLocaleString(undefined, {
+          maximumFractionDigits: 0,
+        })}`
+      );
+      console.log(
+        `   Exposure: $${state.exposure.toLocaleString(undefined, {
+          maximumFractionDigits: 0,
+        })}`
+      );
+      console.log(
+        `   Leverage: ${state.leverage.toFixed(2)}x (range: ${
+          state.leverageMin
+        }x - ${state.leverageMax}x)`
+      );
       console.log(`   Status: ${state.leverageStatus.toUpperCase()}`);
       console.log(`   Margin Ratio: ${(state.marginRatio * 100).toFixed(1)}%`);
 
@@ -386,7 +456,9 @@ async function runDailyCheck(): Promise<DailyCheckResult> {
       }
 
       if (state.pendingContributions > 0) {
-        console.log(`   💰 Pending contributions: $${state.pendingContributions.toLocaleString()}`);
+        console.log(
+          `   💰 Pending contributions: $${state.pendingContributions.toLocaleString()}`
+        );
       }
 
       // Log alerts
@@ -416,7 +488,8 @@ async function runDailyCheck(): Promise<DailyCheckResult> {
     // Count by status
     const statusCounts = {
       low: portfolioStates.filter((s) => s.leverageStatus === "low").length,
-      in_range: portfolioStates.filter((s) => s.leverageStatus === "in_range").length,
+      in_range: portfolioStates.filter((s) => s.leverageStatus === "in_range")
+        .length,
       high: portfolioStates.filter((s) => s.leverageStatus === "high").length,
     };
     console.log(`   Leverage status breakdown:`);
@@ -425,9 +498,13 @@ async function runDailyCheck(): Promise<DailyCheckResult> {
     console.log(`     - High: ${statusCounts.high}`);
 
     // Contribution days
-    const contributionDays = portfolioStates.filter((s) => s.isContributionDay).length;
+    const contributionDays = portfolioStates.filter(
+      (s) => s.isContributionDay
+    ).length;
     if (contributionDays > 0) {
-      console.log(`   📅 Contribution day for ${contributionDays} portfolio(s)`);
+      console.log(
+        `   📅 Contribution day for ${contributionDays} portfolio(s)`
+      );
     }
 
     return {
@@ -472,7 +549,11 @@ async function sendNotifications(result: DailyCheckResult): Promise<void> {
 
   for (const notification of urgentAlerts) {
     console.log(
-      `   → ${notification.email}: [${notification.alert.priority.toUpperCase()}] ${notification.alert.type}`
+      `   → ${
+        notification.email
+      }: [${notification.alert.priority.toUpperCase()}] ${
+        notification.alert.type
+      }`
     );
 
     // TODO: Implement actual email sending
@@ -506,4 +587,3 @@ if (require.main === module) {
 }
 
 export { runDailyCheck, DailyCheckResult, PortfolioState, Alert };
-
