@@ -1,0 +1,30 @@
+name: Keep Alive
+
+on:
+  schedule:
+    # Run every 10 minutes to keep Render service awake
+    - cron: "*/10 * * * *"
+  workflow_dispatch: # Allow manual trigger
+
+jobs:
+  ping:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Ping health endpoint
+        run: |
+          BACKEND_URL="${{ secrets.BACKEND_URL }}"
+          if [ -z "$BACKEND_URL" ]; then
+            echo "⚠️  BACKEND_URL secret not set. Skipping ping."
+            exit 0
+          fi
+          
+          echo "🏓 Pinging $BACKEND_URL/api/health..."
+          response=$(curl -s -o /dev/null -w "%{http_code}" "$BACKEND_URL/api/health" || echo "000")
+          
+          if [ "$response" = "200" ]; then
+            echo "✅ Health check successful (HTTP $response)"
+          else
+            echo "⚠️  Health check returned HTTP $response"
+            exit 1
+          fi
+
