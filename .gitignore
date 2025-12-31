@@ -12,6 +12,12 @@ dist/
 **/out/
 **/build/
 
+# TypeScript compiled files (in scripts directories)
+infra/scripts/*.js
+infra/scripts/*.js.map
+infra/scripts/*.d.ts
+infra/scripts/*.d.ts.map
+
 # Testing
 coverage/
 
