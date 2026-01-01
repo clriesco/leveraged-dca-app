@@ -151,7 +151,9 @@ export default function Contribution() {
     <>
       <Head>
         <title>Aportación Mensual - Leveraged DCA App</title>
-        <style dangerouslySetInnerHTML={{__html: `
+        <style
+          dangerouslySetInnerHTML={{
+            __html: `
           @media (max-width: 768px) {
             .contribution-wrapper {
               padding: 1rem !important;
@@ -172,7 +174,9 @@ export default function Contribution() {
               padding-top: 4rem !important;
             }
           }
-        `}} />
+        `,
+          }}
+        />
       </Head>
       <DashboardSidebar portfolioId={portfolioId}>
         <div
@@ -296,15 +300,25 @@ export default function Contribution() {
                     style={{
                       padding: "0.875rem 2rem",
                       background:
-                        "linear-gradient(135deg, #667eea 0%, #764ba2 100%)",
-                      color: "white",
-                      border: "none",
+                        isSubmitting || !portfolioId
+                          ? "rgba(255, 255, 255, 0.1)"
+                          : "linear-gradient(135deg, #10b981 0%, #059669 100%)",
+                      color:
+                        isSubmitting || !portfolioId
+                          ? "rgba(255, 255, 255, 0.5)"
+                          : "white",
+                      border:
+                        isSubmitting || !portfolioId
+                          ? "1px solid rgba(255, 255, 255, 0.1)"
+                          : "none",
                       borderRadius: "6px",
                       fontSize: "0.95rem",
                       fontWeight: "600",
-                      opacity: isSubmitting || !portfolioId ? 0.7 : 1,
+                      opacity: isSubmitting || !portfolioId ? 0.5 : 1,
                       cursor:
-                        isSubmitting || !portfolioId ? "not-allowed" : "pointer",
+                        isSubmitting || !portfolioId
+                          ? "not-allowed"
+                          : "pointer",
                       minHeight: "48px",
                     }}
                     className="submit-button"
